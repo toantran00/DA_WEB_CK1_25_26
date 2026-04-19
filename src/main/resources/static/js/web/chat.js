@@ -22,6 +22,14 @@ document.addEventListener('DOMContentLoaded', function() {
     // Load lịch sử chat
     loadChatHistory();
     
+    // Polling mechanism - check for new messages every 3 seconds as fallback
+    setInterval(function() {
+        if (!stompClient || !stompClient.connected) {
+            console.log('⚠️ WebSocket disconnected, polling for new messages...');
+            checkForNewMessages();
+        }
+    }, 3000);
+    
     // Xử lý gửi tin nhắn
     const sendButton = document.getElementById('sendButton');
     const messageInput = document.getElementById('messageInput');
@@ -149,6 +157,58 @@ function loadChatHistory() {
                 messages.forEach(message => {
                     // Thêm date divider nếu ngày thay đổi
                     const messageDate = new Date(message.thoiGian).toLocaleDateString('vi-VN');
+                    if (messageDate !== lastDate) {
+                        chatMessages.innerHTML += createDateDivider(messageDate);
+                        lastDate = messageDate;
+                    }
+                    
+                    // Track message IDs
+                    const msgId = message.maTinNhan || `${message.maNguoiGui}-${new Date(message.thoiGian).getTime()}`;
+                    sentMessageIds.add(msgId);
+                    
+                    displayMessage(message, false);
+                });
+                scrollToBottom();
+            }
+        })
+        .catch(error => {
+            console.error('Error loading chat history:', error);
+            chatMessages.innerHTML = '<div class="error-message">Không thể tải lịch sử chat. Vui lòng thử lại.</div>';
+        });
+}
+
+// Check for new messages (polling fallback)
+let lastMessageCheck = Date.now();
+function checkForNewMessages() {
+    fetch(`/chat/history/${storeId}/${vendorId}`)
+        .then(response => response.json())
+        .then(messages => {
+            if (messages.length > 0) {
+                // Only process messages that arrived after last check
+                messages.forEach(message => {
+                    const msgId = message.maTinNhan || `${message.maNguoiGui}-${new Date(message.thoiGian).getTime()}`;
+                    const messageTime = new Date(message.thoiGian).getTime();
+                    
+                    // If message is new and not already displayed
+                    if (!sentMessageIds.has(msgId) && messageTime > lastMessageCheck) {
+                        console.log('📩 New message detected via polling:', message);
+                        displayMessage(message, true);
+                        scrollToBottom();
+                        sentMessageIds.add(msgId);
+                        
+                        // Play notification sound if from vendor
+                        if (String(message.maNguoiGui) === String(vendorId)) {
+                            playNotificationSound();
+                        }
+                    }
+                });
+            }
+            lastMessageCheck = Date.now();
+        })
+        .catch(error => {
+            console.error('Error checking for new messages:', error);
+        });
+}
                     if (messageDate !== lastDate) {
                         chatMessages.innerHTML += createDateDivider(messageDate);
                         lastDate = messageDate;

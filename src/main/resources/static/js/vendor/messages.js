@@ -20,6 +20,16 @@ document.addEventListener('DOMContentLoaded', function() {
     // Load danh sách người chat
     loadChatList();
     
+    // Polling mechanism - check for new messages every 3 seconds as fallback
+    setInterval(function() {
+        if (currentCustomerId) {
+            if (!stompClient || !stompClient.connected) {
+                console.log('⚠️ WebSocket disconnected, polling for new messages...');
+                checkForNewMessages();
+            }
+        }
+    }, 3000);
+    
     // Xử lý gửi tin nhắn
     const sendButton = document.getElementById('sendButton');
     const messageInput = document.getElementById('messageInput');
@@ -288,6 +298,42 @@ function loadChatHistory(customerId) {
         .catch(error => {
             console.error('Error loading chat history:', error);
             chatMessages.innerHTML = '<div class="loading-messages" style="color: #ef4444;">Không thể tải tin nhắn</div>';
+        });
+}
+
+// Check for new messages (polling fallback)
+let lastMessageCheck = Date.now();
+function checkForNewMessages() {
+    if (!currentCustomerId) return;
+    
+    fetch(`/chat/history/${storeId}/${currentCustomerId}`)
+        .then(response => response.json())
+        .then(messages => {
+            if (messages.length > 0) {
+                // Only process messages that arrived after last check
+                messages.forEach(message => {
+                    const msgId = message.maTinNhan || `${message.maNguoiGui}-${new Date(message.thoiGian).getTime()}`;
+                    const messageTime = new Date(message.thoiGian).getTime();
+                    
+                    // If message is new and not already displayed
+                    if (!sentMessageIds.has(msgId) && messageTime > lastMessageCheck) {
+                        console.log('📩 New message detected via polling:', message);
+                        displayMessage(message, true);
+                        scrollToBottom();
+                        sentMessageIds.add(msgId);
+                        
+                        // Play notification sound if from customer
+                        if (String(message.maNguoiGui) === String(currentCustomerId)) {
+                            playNotificationSound();
+                            markAsRead(currentCustomerId);
+                        }
+                    }
+                });
+            }
+            lastMessageCheck = Date.now();
+        })
+        .catch(error => {
+            console.error('Error checking for new messages:', error);
         });
 }
 

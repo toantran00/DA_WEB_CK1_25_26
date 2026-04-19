@@ -729,7 +729,7 @@ function showToast(type, title, message) {
     // Auto remove after 5 seconds
     setTimeout(() => {
         closeToast(toastId);
-    }, 5000);
+    }, 2000);
 }
 
 function closeToast(toastId) {
@@ -781,7 +781,7 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(function() {
             const bsAlert = new bootstrap.Alert(alert);
             bsAlert.close();
-        }, 5000);
+        }, 2000);
     });
     
     console.log('Users management system fully initialized');

@@ -55,6 +55,9 @@ public class DatHangServiceImpl implements DatHangService {
     @Autowired
     @Lazy
     private VanChuyenService vanChuyenService;
+    
+    @Autowired
+    private PhuongThucVanChuyenService phuongThucVanChuyenService;
 
     @Override
     public List<DatHang> findAll() {
@@ -310,6 +313,22 @@ public class DatHangServiceImpl implements DatHangService {
                     .soDienThoaiGiaoHang(cleanedPhone)
                     .ghiChu(datHangRequest.getGhiChu())
                     .build();
+            
+            // Xử lý phương thức vận chuyển
+            if (datHangRequest.getMaPhuongThuc() != null) {
+                PhuongThucVanChuyen phuongThucVanChuyen = phuongThucVanChuyenService
+                        .findById(datHangRequest.getMaPhuongThuc())
+                        .orElse(null);
+                
+                if (phuongThucVanChuyen != null && phuongThucVanChuyen.getTrangThai()) {
+                    datHang.setPhuongThucVanChuyen(phuongThucVanChuyen);
+                    datHang.setPhiVanChuyen(phuongThucVanChuyen.getPhiVanChuyen());
+                } else {
+                    datHang.setPhiVanChuyen(BigDecimal.ZERO);
+                }
+            } else {
+                datHang.setPhiVanChuyen(BigDecimal.ZERO);
+            }
 
             // Xử lý khuyến mãi cho cửa hàng này
             if (datHangRequest.getSelectedPromotions() != null) {
@@ -376,8 +395,9 @@ public class DatHangServiceImpl implements DatHangService {
                 tongTienShop = tongTienShop.add(thanhTien);
             }
 
-            // Cập nhật tổng tiền cho đơn hàng của shop
-            datHang.setTongTien(tongTienShop);
+            // Cập nhật tổng tiền cho đơn hàng của shop (bao gồm phí vận chuyển)
+            BigDecimal tongTienCuoi = tongTienShop.add(datHang.getPhiVanChuyen());
+            datHang.setTongTien(tongTienCuoi);
             datHang = datHangRepository.save(datHang);
 
             createdOrders.add(datHang);
@@ -532,5 +552,17 @@ public class DatHangServiceImpl implements DatHangService {
     @Override
     public Page<DatHang> findByNguoiDung(NguoiDung nguoiDung, Pageable pageable) {
         return datHangRepository.findByNguoiDung(nguoiDung, pageable);
+    }
+    
+    @Override
+    public Page<DatHang> findAllOrdersExcludingBanking(
+            String keyword, 
+            LocalDate startDate, 
+            LocalDate endDate,
+            String trangThai,
+            Integer maCuaHang,
+            Pageable pageable) {
+        return datHangRepository.findAllOrdersExcludingBanking(
+            keyword, startDate, endDate, trangThai, maCuaHang, pageable);
     }
 }

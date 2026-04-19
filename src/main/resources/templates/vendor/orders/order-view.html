@@ -78,6 +78,7 @@
                                     <span th:case="'Đang giao'" class="status-shipping-view" th:text="${datHang.trangThai}">Trạng thái</span>
                                     <span th:case="'Đã xác nhận'" class="status-confirmed-view" th:text="${datHang.trangThai}">Trạng thái</span>
                                     <span th:case="'Hủy'" class="status-cancelled-view" th:text="${datHang.trangThai}">Trạng thái</span>
+                                    <span th:case="'Banking'" class="status-banking-view" th:text="${datHang.trangThai}">Trạng thái</span>
                                     <span th:case="*" class="status-pending-view" th:text="${datHang.trangThai}">Trạng thái</span>
                                 </span>
                             </div>

@@ -117,7 +117,8 @@
                                                        th:value="${matHang.soLuongDat}" 
                                                        min="1" 
                                                        th:max="${matHang.sanPham.soLuongConLai}"
-                                                       readonly>
+                                                       onchange="onQuantityInputChange(this)"
+                                                       oninput="validateQuantityInput(this)">
                                                 <button class="btn-increase" onclick="increaseQuantity(this)">
                                                     <i class="fa-solid fa-plus"></i>
                                                 </button>
@@ -156,11 +157,6 @@
                                 <span class="subtotal" th:text="'₫' + ${#numbers.formatDecimal(tongTien, 0, 'COMMA', 0, 'POINT')}"></span>
                             </div>
                             
-                            <div class="summary-row shipping">
-                                <span>Phí vận chuyển</span>
-                                <span class="shipping-free">Miễn phí</span>
-                            </div>
-                            
                             <div class="summary-divider"></div>
                             
                             <div class="summary-row total">
@@ -170,7 +166,7 @@
                         </div>
                         
                         <div class="summary-actions">
-                            <button class="btn-checkout">
+                            <button class="btn-checkout" onclick="proceedToCheckout(event)">
                                 <i class="fa-solid fa-credit-card"></i>
                                 Xem chi tiết đơn hàng
                             </button>

@@ -9,6 +9,71 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" th:href="@{/css/admin/dashboard.css}">
     <link rel="stylesheet" th:href="@{/css/admin/orders/orders.css}">
+    
+    <style>
+        .order-tabs {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .tab-btn {
+            padding: 12px 24px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            background: white;
+            color: #666;
+            font-weight: 600;
+            transition: all 0.3s;
+            text-decoration: none;
+        }
+        
+        .tab-btn:hover {
+            border-color: #667eea;
+            color: #667eea;
+            background: #f8f9ff;
+        }
+        
+        .tab-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #667eea;
+        }
+        
+        .tab-btn.active:hover {
+            color: white;
+        }
+        
+        .banking-status-badge {
+            background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 15px;
+            font-weight: 600;
+            font-size: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .confirm-payment-btn {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 13px;
+            transition: all 0.3s;
+        }
+        
+        .confirm-payment-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+            color: white;
+        }
+    </style>
 </head>
 <body>
     <div class="container-fluid">
@@ -208,13 +273,32 @@
 						</div>
                     </div>
                     
+                    <!-- Tab Navigation -->
+                    <div class="order-tabs mb-4">
+                        <div class="d-flex gap-2">
+                            <a th:href="@{/admin/orders(view='all', keyword=${keyword}, startDate=${startDate}, endDate=${endDate}, trangThai=${trangThai}, maCuaHang=${maCuaHang})}" 
+                               class="btn tab-btn"
+                               th:classappend="${view == null or view == 'all'} ? 'active' : ''">
+                                <i class="fas fa-list me-2"></i>Danh sách đơn hàng
+                            </a>
+                            <a th:href="@{/admin/orders(view='banking', keyword=${keyword}, startDate=${startDate}, endDate=${endDate}, maCuaHang=${maCuaHang})}" 
+                               class="btn tab-btn"
+                               th:classappend="${view == 'banking'} ? 'active' : ''">
+                                <i class="fas fa-hourglass-half me-2"></i>Danh sách đơn hàng chuyển khoản
+                                <span class="badge bg-warning ms-2" th:if="${orderStats.banking != null and orderStats.banking > 0}" 
+                                      th:text="${orderStats.banking}">0</span>
+                            </a>
+                        </div>
+                    </div>
+                    
                     <!-- Orders Table -->
                     <div class="table-container">
                         <div class="table-header-section">
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <h4 class="mb-0">
                                     <i class="fas fa-list me-2"></i>
-                                    Danh sách Đơn hàng
+                                    <span th:if="${view == 'banking'}">Danh sách đơn hàng chuyển khoản</span>
+                                    <span th:if="${view == null or view == 'all'}">Danh sách đơn hàng</span>
                                     <span class="order-count-badge" th:text="${datHangPage.totalElements}">0</span>
                                 </h4>
                             </div>
@@ -227,13 +311,23 @@
                                     <i class="fas fa-times me-1"></i>Bỏ chọn
                                 </button>
                                 
-                                <button type="button" class="btn btn-bulk-status btn-sm me-2" onclick="showBulkStatusModal()">
-                                    <i class="fas fa-sync-alt me-1"></i>Cập nhật trạng thái
-                                </button>
+                                <!-- Buttons cho Banking View -->
+                                <th:block th:if="${view == 'banking'}">
+                                    <button type="button" class="btn btn-success btn-sm me-2" onclick="bulkConfirmBanking()">
+                                        <i class="fas fa-check-circle me-1"></i>Xác nhận thanh toán
+                                    </button>
+                                </th:block>
                                 
-                                <button type="button" class="btn btn-bulk-delete btn-sm me-2" onclick="showBulkDeleteModal()">
-                                    <i class="fas fa-trash me-1"></i>Xóa đã chọn
-                                </button>
+                                <!-- Buttons cho Normal View -->
+                                <th:block th:if="${view == null or view == 'all'}">
+                                    <button type="button" class="btn btn-bulk-status btn-sm me-2" onclick="showBulkStatusModal()">
+                                        <i class="fas fa-sync-alt me-1"></i>Cập nhật trạng thái
+                                    </button>
+                                    
+                                    <button type="button" class="btn btn-bulk-delete btn-sm me-2" onclick="showBulkDeleteModal()">
+                                        <i class="fas fa-trash me-1"></i>Xóa đã chọn
+                                    </button>
+                                </th:block>
                             </div>
                         </div>
                         
@@ -327,52 +421,82 @@
                                             </div>
                                         </td>
                                         <td>
-										    <div class="status-display" 
-										         th:classappend="${order.trangThai == 'Chờ xác nhận'} ? 'pending' : 
-										                        (${order.trangThai == 'Đã xác nhận'} ? 'confirmed' : 
-										                        (${order.trangThai == 'Đang giao'} ? 'shipping' : 
-										                        (${order.trangThai == 'Hoàn thành'} ? 'completed' : 'cancelled')))"
-										         th:data-order-id="${order.maDatHang}"
-										         th:data-current-status="${order.trangThai}"
-										         th:onclick="${order.trangThai != 'Hoàn thành' and order.trangThai != 'Hủy'} ? 'showStatusModal(this)' : ''">
-										        <i class="fas" 
-										           th:classappend="${order.trangThai == 'Chờ xác nhận'} ? 'fa-clock' : 
-										                          (${order.trangThai == 'Đã xác nhận'} ? 'fa-check-circle' : 
-										                          (${order.trangThai == 'Đang giao'} ? 'fa-shipping-fast' : 
-										                          (${order.trangThai == 'Hoàn thành'} ? 'fa-check-double' : 'fa-times-circle')))"></i>
-										        <span th:text="${order.trangThai}">Chờ xác nhận</span>
-										        <i th:if="${order.trangThai != 'Hoàn thành' and order.trangThai != 'Hủy'}" class="fas fa-chevron-down ms-1"></i>
-										        <small th:if="${order.trangThai == 'Hoàn thành' or order.trangThai == 'Hủy'}" class="ms-1 text-muted">(Khóa)</small>
-										        
-										        <!-- Tooltip hiển thị lý do hủy -->
-										        <div th:if="${order.trangThai == 'Hủy' and order.lyDoHuy != null}" 
-										             class="cancelled-reason-tooltip">
-										            <div class="tooltip-content">
-										                <div class="tooltip-header">
-										                    <i class="fas fa-exclamation-circle"></i>
-										                    Lý do hủy:
-										                </div>
-										                <div class="tooltip-text" th:text="${order.lyDoHuy}"></div>
-										            </div>
-										        </div>
-										    </div>
-										</td>
+                                            <!-- Status for Banking View -->
+                                            <th:block th:if="${view == 'banking'}">
+                                                <span class="banking-status-badge">
+                                                    <i class="fas fa-hourglass-half"></i>
+                                                    Chờ xác nhận TT
+                                                </span>
+                                            </th:block>
+                                            
+                                            <!-- Status for Normal View -->
+                                            <th:block th:if="${view == null or view == 'all'}">
+                                                <div class="status-display" 
+                                                     th:classappend="${order.trangThai == 'Chờ xác nhận'} ? 'pending' : 
+                                                                    (${order.trangThai == 'Đã xác nhận'} ? 'confirmed' : 
+                                                                    (${order.trangThai == 'Đang giao'} ? 'shipping' : 
+                                                                    (${order.trangThai == 'Hoàn thành'} ? 'completed' : 'cancelled')))"
+                                                     th:data-order-id="${order.maDatHang}"
+                                                     th:data-current-status="${order.trangThai}"
+                                                     th:onclick="${order.trangThai != 'Hoàn thành' and order.trangThai != 'Hủy'} ? 'showStatusModal(this)' : ''">
+                                                    <i class="fas" 
+                                                       th:classappend="${order.trangThai == 'Chờ xác nhận'} ? 'fa-clock' : 
+                                                                      (${order.trangThai == 'Đã xác nhận'} ? 'fa-check-circle' : 
+                                                                      (${order.trangThai == 'Đang giao'} ? 'fa-shipping-fast' : 
+                                                                      (${order.trangThai == 'Hoàn thành'} ? 'fa-check-double' : 'fa-times-circle')))"></i>
+                                                    <span th:text="${order.trangThai}">Chờ xác nhận</span>
+                                                    <i th:if="${order.trangThai != 'Hoàn thành' and order.trangThai != 'Hủy'}" class="fas fa-chevron-down ms-1"></i>
+                                                    <small th:if="${order.trangThai == 'Hoàn thành' or order.trangThai == 'Hủy'}" class="ms-1 text-muted">(Khóa)</small>
+                                                    
+                                                    <div th:if="${order.trangThai == 'Hủy' and order.lyDoHuy != null}" 
+                                                         class="cancelled-reason-tooltip">
+                                                        <div class="tooltip-content">
+                                                            <div class="tooltip-header">
+                                                                <i class="fas fa-exclamation-circle"></i>
+                                                                Lý do hủy:
+                                                            </div>
+                                                            <div class="tooltip-text" th:text="${order.lyDoHuy}"></div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </th:block>
+                                        </td>
                                         <td>
-                                            <div class="admin-action-buttons action-group-row">
-                                                <a th:href="@{/admin/orders/view/{id}(id=${order.maDatHang})}" 
-                                                   class="action-btn btn-view"
-                                                   title="Xem chi tiết">
-                                                    <i class="fas fa-eye"></i>
-                                                </a>
-                                                <button type="button" 
-                                                        class="action-btn btn-delete"
-                                                        th:data-order-id="${order.maDatHang}"
-                                                        th:data-customer-name="${order.nguoiDung.email}"
-                                                        onclick="showDeleteModal(this)"
-                                                        title="Xóa">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </div>
+                                            <!-- Actions for Banking View -->
+                                            <th:block th:if="${view == 'banking'}">
+                                                <div class="admin-action-buttons action-group-row">
+                                                    <button type="button" 
+                                                            class="confirm-payment-btn"
+                                                            th:onclick="'confirmBankingPayment(' + ${order.maDatHang} + ')'"
+                                                            title="Xác nhận thanh toán">
+                                                        <i class="fas fa-check-circle me-1"></i>Xác nhận
+                                                    </button>
+                                                    <a th:href="@{/admin/orders/view/{id}(id=${order.maDatHang})}" 
+                                                       class="action-btn btn-view"
+                                                       title="Xem chi tiết">
+                                                        <i class="fas fa-eye"></i>
+                                                    </a>
+                                                </div>
+                                            </th:block>
+                                            
+                                            <!-- Actions for Normal View -->
+                                            <th:block th:if="${view == null or view == 'all'}">
+                                                <div class="admin-action-buttons action-group-row">
+                                                    <a th:href="@{/admin/orders/view/{id}(id=${order.maDatHang})}" 
+                                                       class="action-btn btn-view"
+                                                       title="Xem chi tiết">
+                                                        <i class="fas fa-eye"></i>
+                                                    </a>
+                                                    <button type="button" 
+                                                            class="action-btn btn-delete"
+                                                            th:data-order-id="${order.maDatHang}"
+                                                            th:data-customer-name="${order.nguoiDung.email}"
+                                                            onclick="showDeleteModal(this)"
+                                                            title="Xóa">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </th:block>
                                         </td>
                                     </tr>
                                     <tr th:if="${datHangPage.content.empty}">
@@ -392,7 +516,7 @@
                             <ul class="pagination">
                                 <li class="page-item" th:classappend="${datHangPage.first} ? 'disabled'">
                                     <a class="page-link" 
-                                       th:href="@{/admin/orders(page=${datHangPage.number - 1}, keyword=${keyword}, trangThai=${trangThai}, maCuaHang=${maCuaHang}, startDate=${startDate}, endDate=${endDate})}">
+                                       th:href="@{/admin/orders(page=${datHangPage.number - 1}, view=${view}, keyword=${keyword}, trangThai=${trangThai}, maCuaHang=${maCuaHang}, startDate=${startDate}, endDate=${endDate})}">
                                         <i class="fas fa-chevron-left"></i>
                                     </a>
                                 </li>
@@ -401,13 +525,13 @@
                                     th:each="i : ${#numbers.sequence(0, datHangPage.totalPages - 1)}"
                                     th:classappend="${i == datHangPage.number} ? 'active'">
                                     <a class="page-link" 
-                                       th:href="@{/admin/orders(page=${i}, keyword=${keyword}, trangThai=${trangThai}, maCuaHang=${maCuaHang}, startDate=${startDate}, endDate=${endDate})}"
+                                       th:href="@{/admin/orders(page=${i}, view=${view}, keyword=${keyword}, trangThai=${trangThai}, maCuaHang=${maCuaHang}, startDate=${startDate}, endDate=${endDate})}"
                                        th:text="${i + 1}">1</a>
                                 </li>
                                 
                                 <li class="page-item" th:classappend="${datHangPage.last} ? 'disabled'">
                                     <a class="page-link" 
-                                       th:href="@{/admin/orders(page=${datHangPage.number + 1}, keyword=${keyword}, trangThai=${trangThai}, maCuaHang=${maCuaHang}, startDate=${startDate}, endDate=${endDate})}">
+                                       th:href="@{/admin/orders(page=${datHangPage.number + 1}, view=${view}, keyword=${keyword}, trangThai=${trangThai}, maCuaHang=${maCuaHang}, startDate=${startDate}, endDate=${endDate})}">
                                         <i class="fas fa-chevron-right"></i>
                                     </a>
                                 </li>
@@ -639,7 +763,131 @@
     <div id="toastContainer"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script th:src="@{/js/admin/dashboard.js}"></script>
     <script th:src="@{/js/admin/orders/orders.js}"></script>
+    
+    <script>
+        // Confirm single banking payment
+        function confirmBankingPayment(orderId) {
+            Swal.fire({
+                title: 'Xác nhận thanh toán',
+                text: 'Bạn đã kiểm tra và nhận được tiền chuyển khoản cho đơn hàng này?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#28a745',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: '<i class="fas fa-check me-2"></i>Đã nhận tiền',
+                cancelButtonText: '<i class="fas fa-times me-2"></i>Hủy'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    fetch(`/admin/orders/confirm-banking/${orderId}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Thành công!',
+                                text: data.message,
+                                timer: 2000,
+                                showConfirmButton: false
+                            }).then(() => {
+                                window.location.reload();
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Lỗi!',
+                                text: data.message
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Lỗi!',
+                            text: 'Có lỗi xảy ra khi xác nhận thanh toán'
+                        });
+                    });
+                }
+            });
+        }
+
+        // Bulk confirm banking payments
+        function bulkConfirmBanking() {
+            const checkedBoxes = document.querySelectorAll('.order-checkbox:checked');
+            const orderIds = Array.from(checkedBoxes).map(cb => cb.value);
+
+            if (orderIds.length === 0) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Chưa chọn đơn hàng',
+                    text: 'Vui lòng chọn ít nhất một đơn hàng để xác nhận'
+                });
+                return;
+            }
+
+            Swal.fire({
+                title: 'Xác nhận thanh toán hàng loạt',
+                text: `Bạn muốn xác nhận thanh toán cho ${orderIds.length} đơn hàng đã chọn?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#28a745',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: '<i class="fas fa-check me-2"></i>Xác nhận',
+                cancelButtonText: '<i class="fas fa-times me-2"></i>Hủy'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const formData = new URLSearchParams();
+                    orderIds.forEach(id => formData.append('ids', id));
+
+                    fetch('/admin/orders/bulk-confirm-banking', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            let message = data.message;
+                            if (data.errors && data.errors.length > 0) {
+                                message += '\n\nChi tiết lỗi:\n' + data.errors.join('\n');
+                            }
+                            
+                            Swal.fire({
+                                icon: data.errorCount > 0 ? 'warning' : 'success',
+                                title: 'Hoàn thành!',
+                                text: message,
+                                timer: 3000,
+                                showConfirmButton: false
+                            }).then(() => {
+                                window.location.reload();
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Lỗi!',
+                                text: data.message
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Lỗi!',
+                            text: 'Có lỗi xảy ra khi xác nhận thanh toán'
+                        });
+                    });
+                }
+            });
+        }
+    </script>
 </body>
 </html>

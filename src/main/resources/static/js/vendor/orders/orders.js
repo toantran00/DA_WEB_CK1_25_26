@@ -45,6 +45,12 @@ function showStatusModal(element) {
     const orderId = element.getAttribute('data-order-id');
     const currentStatus = element.getAttribute('data-current-status');
     
+    // KIỂM TRA: Nếu đơn hàng đang ở trạng thái Banking thì không cho phép cập nhật
+    if (currentStatus === 'Banking') {
+        showToast('warning', 'Thông báo', 'Vui lòng chờ Admin xác nhận thanh toán');
+        return;
+    }
+    
     // KIỂM TRA: Nếu đơn hàng đã hoàn thành hoặc đã hủy thì không cho phép cập nhật
     if (currentStatus === 'Hoàn thành' || currentStatus === 'Hủy') {
         showToast('warning', 'Thông báo', `Đơn hàng đã ${currentStatus.toLowerCase()}, không thể thay đổi trạng thái`);
@@ -609,7 +615,7 @@ function showToast(type, title, message) {
     
     setTimeout(() => {
         closeToast(toastId);
-    }, 5000);
+    }, 2000);
 }
 
 function closeToast(toastId) {
@@ -787,7 +793,7 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(function() {
             const bsAlert = new bootstrap.Alert(alert);
             bsAlert.close();
-        }, 5000);
+        }, 2000);
     });
 
     // Gán hàm đóng toast vào window để các nút close trong HTML gọi được

@@ -112,7 +112,8 @@ public class SecurityConfig {
             	        if ("ADMIN".equals(role)) {
             	            response.sendRedirect("/admin/dashboard");
             	        } else if ("VENDOR".equals(role)) {
-            	            response.sendRedirect("/vendor/dashboard");
+            	            // Vendor đăng nhập vào trang index
+            	            response.sendRedirect("/");
             	        } else {
             	            response.sendRedirect("/user/dashboard");
             	        }

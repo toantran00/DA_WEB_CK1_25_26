@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Đăng ký - PetStore</title>
     <link rel="stylesheet" th:href="@{/css/web/register.css}">
+    <link rel="stylesheet" th:href="@{/css/web/maps.css}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
@@ -83,6 +84,29 @@
                         </div>
                     </div>
                 </div>
+                
+                <!-- Hidden fields for coordinates -->
+                <input type="hidden" id="latitude" name="latitude">
+                <input type="hidden" id="longitude" name="longitude">
+                
+                <!-- Map Controls -->
+                <div class="map-controls" style="margin: 15px 0;">
+                    <button type="button" class="btn-map-control" onclick="searchAddressOnMap()" style="background: #2196F3; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; margin-right: 10px;">
+                        <i class="fas fa-search"></i> Tìm trên bản đồ
+                    </button>
+                    <button type="button" class="btn-map-control" onclick="getCurrentLocationForRegister()" style="background: #4CAF50; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer;">
+                        <i class="fas fa-location-arrow"></i> Vị trí hiện tại
+                    </button>
+                </div>
+                
+                <!-- Map Container -->
+                <div class="map-container" id="mapContainer" style="display: none; margin: 15px 0;">
+                    <div id="map"></div>
+                </div>
+                <div class="map-info" id="mapInfo" style="display: none; background: #f5f5f5; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 13px;">
+                    <i class="fas fa-info-circle" style="color: #2196F3;"></i>
+                    <span>Kéo marker hoặc click vào bản đồ để chọn vị trí chính xác</span>
+                </div>
 
                 <div class="form-group">
                     <label class="terms-checkbox">
@@ -105,6 +129,57 @@
         </div>
     </div>
 
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- Leaflet JS - KHÔNG CẦN API KEY! -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Load maps helper -->
+    <script th:src="@{/js/web/maps-leaflet.js}"></script>
+    
     <script th:src="@{/js/web/registerValidate.js}"></script>
+    <script>
+        // Google Maps functions for register page
+        let mapInitialized = false;
+        
+        function searchAddressOnMap() {
+            const address = document.getElementById('diaChi').value.trim();
+            if (!address) {
+                alert('Vui lòng nhập địa chỉ trước');
+                return;
+            }
+            
+            showMap();
+            if (window.mapsHelper) {
+                window.mapsHelper.geocodeAddress(address);
+            }
+        }
+        
+        function getCurrentLocationForRegister() {
+            showMap();
+            if (window.mapsHelper) {
+                window.mapsHelper.getCurrentLocation();
+            }
+        }
+        
+        function showMap() {
+            document.getElementById('mapContainer').style.display = 'block';
+            document.getElementById('mapInfo').style.display = 'block';
+            
+            if (!mapInitialized && window.mapsHelper) {
+                window.mapsHelper.initMap('map');
+                window.mapsHelper.initAutocomplete('diaChi');
+                mapInitialized = true;
+            }
+        }
+        
+        // Auto show map when address is entered
+        document.getElementById('diaChi').addEventListener('focus', function() {
+            if (this.value.trim()) {
+                showMap();
+            }
+        });
+    </script>
 </body>
 </html>

@@ -87,4 +87,23 @@ public interface DatHangRepository extends JpaRepository<DatHang, Integer> {
     	    @Param("trangThai") String trangThai,
     	    @Param("maCuaHang") Integer maCuaHang,
     	    Pageable pageable);
+    
+    @Query("SELECT DISTINCT dh FROM DatHang dh " +
+           "LEFT JOIN dh.datHangChiTiets dhct " +
+           "LEFT JOIN dhct.sanPham sp " +
+           "LEFT JOIN sp.cuaHang ch " +
+           "WHERE dh.trangThai != 'Banking' " +
+           "AND (:keyword IS NULL OR LOWER(dh.nguoiDung.email) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "     OR CAST(dh.maDatHang AS string) LIKE CONCAT('%', :keyword, '%')) " +
+           "AND (:startDate IS NULL OR dh.ngayDat >= :startDate) " +
+           "AND (:endDate IS NULL OR dh.ngayDat <= :endDate) " +
+           "AND (:trangThai IS NULL OR dh.trangThai = :trangThai) " +
+           "AND (:maCuaHang IS NULL OR ch.maCuaHang = :maCuaHang)")
+    Page<DatHang> findAllOrdersExcludingBanking(
+        @Param("keyword") String keyword,
+        @Param("startDate") LocalDate startDate,
+        @Param("endDate") LocalDate endDate,
+        @Param("trangThai") String trangThai,
+        @Param("maCuaHang") Integer maCuaHang,
+        Pageable pageable);
 }

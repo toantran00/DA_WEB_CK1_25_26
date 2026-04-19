@@ -80,26 +80,43 @@ public class ProfileController {
     @GetMapping("/api/user/profile")
     @ResponseBody
     public ResponseEntity<ApiResponse<UserProfileDTO>> getUserProfile(HttpServletRequest request) {
+        System.out.println("=== GET USER PROFILE API CALLED ===");
         try {
             String token = extractJwtFromRequest(request);
+            System.out.println("Token extracted: " + (token != null ? "Yes (length: " + (token != null ? token.length() : 0) + ")" : "No"));
             
-            if (token == null || !jwtUtil.validateJwtToken(token)) {
+            if (token == null) {
+                System.out.println("❌ No token found - User needs to login");
                 return ResponseEntity.status(401)
-                    .body(ApiResponse.error("Unauthorized: Token không hợp lệ"));
+                    .body(ApiResponse.error("Unauthorized: Vui lòng đăng nhập"));
+            }
+            
+            if (!jwtUtil.validateJwtToken(token)) {
+                System.out.println("❌ Token validation failed - Invalid or expired token");
+                return ResponseEntity.status(401)
+                    .body(ApiResponse.error("Unauthorized: Token không hợp lệ hoặc đã hết hạn"));
             }
             
             String email = jwtUtil.getUserNameFromJwtToken(token);
+            System.out.println("✅ Email from token: " + email);
+            
             NguoiDung user = nguoiDungRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
+            
+            System.out.println("✅ User found: " + user.getTenNguoiDung() + " (ID: " + user.getMaNguoiDung() + ")");
             
             // Convert entity to DTO to avoid JSON serialization issues
             UserProfileDTO userDTO = convertToDTO(user);
             
+            System.out.println("=== ✅ RETURNING SUCCESS ===");
             return ResponseEntity.ok(ApiResponse.success(userDTO));
             
         } catch (Exception e) {
-            System.err.println("Error getting user profile: " + e.getMessage());
+            System.err.println("=== ❌ ERROR IN GET USER PROFILE ===");
+            System.err.println("Error type: " + e.getClass().getName());
+            System.err.println("Error message: " + e.getMessage());
             e.printStackTrace();
+            System.err.println("=== END ERROR ===");
             return ResponseEntity.status(500)
                 .body(ApiResponse.error("Lỗi server: " + e.getMessage()));
         }
@@ -288,9 +305,12 @@ public class ProfileController {
 
     // Helper method to extract JWT token from request
     private String extractJwtFromRequest(HttpServletRequest request) {
+        System.out.println("=== EXTRACTING JWT TOKEN ===");
+        
         // Try to get from Authorization header first
         String bearerToken = request.getHeader("Authorization");
         if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
+            System.out.println("Token found in Authorization header");
             return bearerToken.substring(7);
         }
         
@@ -298,11 +318,21 @@ public class ProfileController {
         if (request.getCookies() != null) {
             for (var cookie : request.getCookies()) {
                 if ("jwtToken".equals(cookie.getName())) {
+                    System.out.println("Token found in cookie");
                     return cookie.getValue();
                 }
             }
         }
         
+        // Try to get from session (for form-based login)
+        Object sessionToken = request.getSession(false) != null ? 
+            request.getSession(false).getAttribute("jwtToken") : null;
+        if (sessionToken != null) {
+            System.out.println("Token found in session");
+            return sessionToken.toString();
+        }
+        
+        System.out.println("No token found in header, cookie, or session");
         return null;
     }
 
@@ -424,6 +454,8 @@ public class ProfileController {
                 .tenNguoiNhan(addressDTO.getTenNguoiNhan())
                 .soDienThoai(addressDTO.getSoDienThoai())
                 .diaChiChiTiet(addressDTO.getDiaChiChiTiet())
+                .latitude(addressDTO.getLatitude())
+                .longitude(addressDTO.getLongitude())
                 .macDinh(false) // Luôn là false khi người dùng tự thêm
                 .trangThai("Hoạt động")
                 .build();
@@ -472,6 +504,8 @@ public class ProfileController {
             diaChi.setTenNguoiNhan(addressDTO.getTenNguoiNhan());
             diaChi.setSoDienThoai(addressDTO.getSoDienThoai());
             diaChi.setDiaChiChiTiet(addressDTO.getDiaChiChiTiet());
+            diaChi.setLatitude(addressDTO.getLatitude());
+            diaChi.setLongitude(addressDTO.getLongitude());
             if (addressDTO.getMacDinh() != null) {
                 diaChi.setMacDinh(addressDTO.getMacDinh());
             }
@@ -574,6 +608,8 @@ public class ProfileController {
             .tenNguoiNhan(diaChi.getTenNguoiNhan())
             .soDienThoai(diaChi.getSoDienThoai())
             .diaChiChiTiet(diaChi.getDiaChiChiTiet())
+            .latitude(diaChi.getLatitude())
+            .longitude(diaChi.getLongitude())
             .macDinh(diaChi.getMacDinh())
             .trangThai(diaChi.getTrangThai())
             .build();

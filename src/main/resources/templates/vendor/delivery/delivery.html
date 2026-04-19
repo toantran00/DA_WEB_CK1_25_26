@@ -175,15 +175,16 @@
                                                 </td>
                                                 
                                                 <td class="info-column">
-                                                    <div class="order-notes">
-                                                        <span th:if="${order.ghiChu}" 
-                                                              class="note-text" 
-                                                              th:attr="data-bs-toggle=tooltip,data-bs-title=${order?.ghiChu}"
-                                                              th:text="${#strings.abbreviate(order?.ghiChu, 15)}">
-                                                        </span>
-                                                        <span th:unless="${order.ghiChu}" class="text-muted">Không có</span>
-                                                    </div>
-                                                </td>
+												    <div class="order-notes">
+												        <span th:if="${order.ghiChu != null and !#strings.isEmpty(order.ghiChu)}" 
+												              class="note-text" 
+												              th:attr="data-bs-toggle=tooltip,data-bs-title=${order.ghiChu}"
+												              th:text="${#strings.abbreviate(order.ghiChu, 15)}">
+												        </span>
+												        <span th:if="${order.ghiChu == null or #strings.isEmpty(order.ghiChu)}" 
+												              class="text-muted">Không có</span>
+												    </div>
+												</td>
                                                 
                                                 <td class="info-column">
                                                     <div class="promotion-info">

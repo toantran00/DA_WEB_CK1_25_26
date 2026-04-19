@@ -128,6 +128,16 @@ public interface DatHangService {
             Integer maCuaHang,
             Pageable pageable);
     
+    /**
+     * Tìm tất cả đơn hàng NGOẠI TRỪ đơn có trạng thái "Banking"
+     */
+    Page<DatHang> findAllOrdersExcludingBanking(
+            String keyword, 
+            LocalDate startDate, 
+            LocalDate endDate,
+            String trangThai,
+            Integer maCuaHang,
+            Pageable pageable);
     
     DatHang updateOrderStatus(Integer maDatHang, String newStatus);
     

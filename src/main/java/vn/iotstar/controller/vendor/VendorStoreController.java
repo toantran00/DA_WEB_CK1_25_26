@@ -115,9 +115,10 @@ public class VendorStoreController {
             
             System.out.println("Store created successfully: " + cuaHang.getTenCuaHang());
             
-            // *** REDIRECT ĐẾN LOGOUT ENDPOINT VỚI PARAMETER ***
-            // Spring Security sẽ xử lý việc logout và redirect về login
-            return "redirect:/logout?from=store-registration";
+            // Thêm thông báo thành công và redirect về trang chủ
+            redirectAttributes.addFlashAttribute("storeRegistrationSuccess", true);
+            redirectAttributes.addFlashAttribute("successMessage", "Đăng ký cửa hàng thành công! Chào mừng bạn đến với kênh người bán hàng.");
+            return "redirect:/";
 
         } catch (Exception e) {
             System.err.println("Error in registerStore: " + e.getMessage());

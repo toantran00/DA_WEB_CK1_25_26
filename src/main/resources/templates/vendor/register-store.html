@@ -6,6 +6,7 @@
     <title>Đăng ký cửa hàng - PetShop</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" th:href="@{/css/vendor/register-store.css}">
+    <link rel="stylesheet" th:href="@{/css/web/maps.css}">
 </head>
 <body>
     <header class="header">
@@ -66,6 +67,29 @@
                     <input type="text" id="diaChi" th:field="*{diaChi}" placeholder="Nhập địa chỉ đầy đủ" required maxlength="255">
                     <div class="error" th:if="${#fields.hasErrors('diaChi')}" th:errors="*{diaChi}"></div>
                     <div class="error" id="error-diaChi"></div>
+                </div>
+                
+                <!-- Hidden fields for coordinates -->
+                <input type="hidden" id="latitude" name="latitude">
+                <input type="hidden" id="longitude" name="longitude">
+                
+                <!-- Map Controls -->
+                <div class="map-controls" style="margin-bottom: 15px;">
+                    <button type="button" class="btn btn-secondary" onclick="searchStoreAddress()" style="margin-right: 10px;">
+                        <i class="fas fa-search"></i> Tìm trên bản đồ
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="getStoreCurrentLocation()">
+                        <i class="fas fa-location-arrow"></i> Vị trí hiện tại
+                    </button>
+                </div>
+                
+                <!-- Map Container -->
+                <div class="map-container" id="mapContainer" style="display: none; margin-bottom: 20px;">
+                    <div id="map"></div>
+                </div>
+                <div class="map-info" id="mapInfo" style="display: none;">
+                    <i class="fas fa-info-circle"></i>
+                    <span>Kéo marker hoặc click vào bản đồ để chọn vị trí chính xác cho cửa hàng</span>
                 </div>
 
                 <div class="form-row">
@@ -130,6 +154,57 @@
         </div>
     </div>
 
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- Leaflet JS - KHÔNG CẦN API KEY! -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Load maps helper -->
+    <script th:src="@{/js/web/maps-leaflet.js}"></script>
+    
     <script th:src="@{/js/vendor/register-store.js}"></script>
+    <script>
+        // Google Maps functions for store registration
+        let storeMapInitialized = false;
+        
+        function searchStoreAddress() {
+            const address = document.getElementById('diaChi').value.trim();
+            if (!address) {
+                alert('Vui lòng nhập địa chỉ cửa hàng trước');
+                return;
+            }
+            
+            showStoreMap();
+            if (window.mapsHelper) {
+                window.mapsHelper.geocodeAddress(address);
+            }
+        }
+        
+        function getStoreCurrentLocation() {
+            showStoreMap();
+            if (window.mapsHelper) {
+                window.mapsHelper.getCurrentLocation();
+            }
+        }
+        
+        function showStoreMap() {
+            document.getElementById('mapContainer').style.display = 'block';
+            document.getElementById('mapInfo').style.display = 'block';
+            
+            if (!storeMapInitialized && window.mapsHelper) {
+                window.mapsHelper.initMap('map');
+                window.mapsHelper.initAutocomplete('diaChi');
+                storeMapInitialized = true;
+            }
+        }
+        
+        // Auto show map when address is entered
+        document.getElementById('diaChi').addEventListener('focus', function() {
+            if (this.value.trim()) {
+                showStoreMap();
+            }
+        });
+    </script>
 </body>
 </html>

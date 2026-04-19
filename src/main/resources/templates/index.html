@@ -456,9 +456,6 @@
 	                            <img id="currentStoreAvatar" src="/images/default-store.png" alt="Store" class="store-chat-avatar">
 	                            <div class="store-chat-details">
 	                                <h4 id="currentStoreName">Cửa hàng</h4>
-	                                <span class="online-status">
-	                                    <i class="fa-solid fa-circle"></i> Đang hoạt động
-	                                </span>
 	                            </div>
 	                        </div>
 	                        <div class="store-chat-actions">
@@ -564,6 +561,48 @@
     <!-- Cart Functionality Script -->
 	<script>
 		document.addEventListener('DOMContentLoaded', function() {
+		    // ======================================================
+		    // LOGIC 0: XỬ LÝ THÔNG BÁO ĐĂNG KÝ CỬA HÀNG THÀNH CÔNG
+		    // ======================================================
+		    
+		    // Kiểm tra flag từ localStorage (sau khi reload)
+		    const justRegisteredStore = localStorage.getItem('justRegisteredStore');
+		    if (justRegisteredStore === 'true') {
+		        localStorage.removeItem('justRegisteredStore');
+		        if (typeof showToast === 'function') {
+		            showToast('success', 'Thành công!', 'Đăng ký cửa hàng thành công! Chào mừng bạn đến với kênh người bán hàng.', 5000);
+		        }
+		    }
+		    
+		    // Kiểm tra flash attribute từ server
+		    const storeRegistrationSuccess = /*[[${storeRegistrationSuccess}]]*/ false;
+		    const successMessage = /*[[${successMessage}]]*/ '';
+		    
+		    if (storeRegistrationSuccess) {
+		        // Cập nhật role user trong localStorage
+		        const userDataStr = localStorage.getItem('user');
+		        if (userDataStr) {
+		            try {
+		                const userData = JSON.parse(userDataStr);
+		                // Cập nhật role thành VENDOR
+		                userData.role = 'VENDOR';
+		                if (userData.vaiTro) {
+		                    userData.vaiTro.maVaiTro = 'VENDOR';
+		                }
+		                // Lưu lại vào localStorage
+		                localStorage.setItem('user', JSON.stringify(userData));
+		                
+		                // Đánh dấu để hiển thị thông báo sau khi reload
+		                localStorage.setItem('justRegisteredStore', 'true');
+		                
+		                // Reload trang để cập nhật UI
+		                location.reload();
+		            } catch (e) {
+		                console.error('Error updating user role:', e);
+		            }
+		        }
+		    }
+		    
 		    // ======================================================
 		    // LOGIC 1: THÊM VÀO GIỎ HÀNG (GIỮ NGUYÊN)
 		    // ======================================================

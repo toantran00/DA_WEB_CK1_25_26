@@ -163,6 +163,44 @@ public class QRCodeService {
     }
 
     /**
+     * Tạo QR code VietQR cho chuyển khoản ngân hàng
+     * Sử dụng VietQR API từ img.vietqr.io
+     * 
+     * @param bankBin Mã BIN ngân hàng (VD: 970405 - Agribank)
+     * @param accountNo Số tài khoản
+     * @param accountName Tên chủ tài khoản
+     * @param amount Số tiền
+     * @param description Nội dung chuyển khoản
+     * @return URL của QR code hoặc base64
+     */
+    public String generateVietQRCode(String bankBin, String accountNo, String accountName, 
+                                     Long amount, String description) {
+        try {
+            // Format: https://img.vietqr.io/image/{BANK_ID}-{ACCOUNT_NO}-{TEMPLATE}.png?amount={AMOUNT}&addInfo={DESCRIPTION}&accountName={ACCOUNT_NAME}
+            String template = "compact2"; // compact, compact2, qr_only, print
+            
+            // Encode description để đảm bảo URL hợp lệ
+            String encodedDescription = URLEncoder.encode(description, StandardCharsets.UTF_8.toString());
+            String encodedAccountName = URLEncoder.encode(accountName, StandardCharsets.UTF_8.toString());
+            
+            // Tạo URL VietQR
+            String vietQRUrl = String.format(
+                "https://img.vietqr.io/image/%s-%s-%s.png?amount=%d&addInfo=%s&accountName=%s",
+                bankBin, accountNo, template, amount, encodedDescription, encodedAccountName
+            );
+            
+            log.info("Generated VietQR URL: {}", vietQRUrl);
+            
+            // Trả về URL trực tiếp để hiển thị trong <img src="">
+            return vietQRUrl;
+            
+        } catch (Exception e) {
+            log.error("Error generating VietQR code: ", e);
+            return null;
+        }
+    }
+
+    /**
      * Tạo QR code từ URL thanh toán thực tế
      */
     public String generatePaymentQRCodeFromUrl(String paymentUrl) {

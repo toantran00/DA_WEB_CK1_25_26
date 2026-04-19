@@ -79,28 +79,50 @@ function validatePhoneNumber(input) {
 
 // Load user profile from API
 async function loadUserProfile() {
-    const token = localStorage.getItem('jwtToken');
-
+    console.log('🔄 Bắt đầu load user profile...');
+    
     // Show loading state
     showLoadingState();
 
-    if (!token) {
-        showError('Vui lòng đăng nhập để xem trang cá nhân');
-        setTimeout(() => {
-            window.location.href = '/login';
-        }, 2000);
-        return;
-    }
+    // Timeout để tránh loading vô hạn
+    const timeoutId = setTimeout(() => {
+        console.error('⏱️ Request timeout sau 10 giây');
+        showError('Kết nối quá lâu. Vui lòng kiểm tra server có đang chạy không và thử lại.');
+    }, 10000);
 
     try {
+        console.log('📡 Đang gọi API /profile/api/user/profile...');
+        
+        const controller = new AbortController();
+        const timeoutSignal = setTimeout(() => controller.abort(), 10000);
+        
+        // Lấy token từ localStorage (nếu có)
+        const token = localStorage.getItem('jwtToken');
+        console.log('Token from localStorage:', token ? 'Có' : 'Không có');
+        
+        // Gửi request - token sẽ được lấy từ cookie hoặc Authorization header
+        const headers = {
+            'Content-Type': 'application/json'
+        };
+        
+        // Chỉ thêm Authorization header nếu có token trong localStorage
+        if (token) {
+            headers['Authorization'] = 'Bearer ' + token;
+        }
+        
         const response = await fetch('/profile/api/user/profile', {
-            headers: {
-                'Authorization': 'Bearer ' + token,
-                'Content-Type': 'application/json'
-            }
+            signal: controller.signal,
+            headers: headers,
+            credentials: 'include' // Quan trọng: gửi cookie cùng với request
         });
 
+        clearTimeout(timeoutSignal);
+        clearTimeout(timeoutId);
+
+        console.log('📥 Response status:', response.status);
+
         if (response.status === 401) {
+            console.error('❌ Token hết hạn (401)');
             localStorage.removeItem('jwtToken');
             localStorage.removeItem('user');
             showError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
@@ -111,22 +133,35 @@ async function loadUserProfile() {
         }
 
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            console.error('❌ HTTP error:', response.status);
+            const errorText = await response.text();
+            console.error('Error response:', errorText);
+            throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
         }
 
         const result = await response.json();
+        console.log('📦 API Response:', result);
 
         if (result.success) {
+            console.log('✅ Load profile thành công');
             currentUser = result.data;
             displayUserProfile(currentUser);
             showProfileContent();
         } else {
+            console.error('❌ API trả về lỗi:', result.message);
             showError('Lỗi: ' + result.message);
         }
 
     } catch (error) {
-        console.error('Profile loading error:', error);
-        showError('Lỗi kết nối: ' + error.message);
+        clearTimeout(timeoutId);
+        console.error('❌ Profile loading error:', error);
+        console.error('Error details:', error.message, error.stack);
+        
+        if (error.name === 'AbortError') {
+            showError('Kết nối quá lâu (timeout). Vui lòng kiểm tra server và thử lại.');
+        } else {
+            showError('Lỗi kết nối API. Kiểm tra server có đang chạy không. Chi tiết: ' + error.message);
+        }
     }
 }
 
@@ -249,9 +284,32 @@ function displayUserProfile(user) {
 
                                 <div class="form-group full-width">
                                     <label class="form-label">Địa chỉ</label>
-                                    <input type="text" class="form-input" id="diaChi" name="diaChi" 
-                                           value="${diaChi}" 
-                                           placeholder="Nhập địa chỉ của bạn" disabled>
+                                    <div class="address-input-group">
+                                        <textarea class="form-input" id="diaChi" name="diaChi" rows="2" 
+                                                  placeholder="Nhập địa chỉ của bạn hoặc chọn trên bản đồ" disabled>${diaChi}</textarea>
+                                    </div>
+                                    <input type="hidden" id="profileLatitude" value="">
+                                    <input type="hidden" id="profileLongitude" value="">
+                                    
+                                    <div id="profileMapControls" style="display: none; margin-top: 10px;">
+                                        <div class="map-controls">
+                                            <button type="button" class="btn btn-sm secondary" onclick="searchProfileAddressOnMap()">
+                                                <i class="fas fa-search"></i> Tìm trên bản đồ
+                                            </button>
+                                            <button type="button" class="btn btn-sm secondary" onclick="getProfileCurrentLocation()">
+                                                <i class="fas fa-location-arrow"></i> Vị trí hiện tại
+                                            </button>
+                                        </div>
+                                        
+                                        <div class="map-container" style="height: 300px; margin-top: 10px;">
+                                            <div id="profileMap"></div>
+                                        </div>
+                                        
+                                        <div class="map-info">
+                                            <i class="fas fa-info-circle"></i>
+                                            <span>Bạn có thể kéo marker hoặc click vào bản đồ để chọn vị trí chính xác</span>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div class="form-group full-width">
@@ -331,7 +389,7 @@ function displayUserProfile(user) {
             
             <!-- Modal thêm/sửa địa chỉ -->
             <div id="addressModal" class="modal" style="display: none;">
-                <div class="modal-content">
+                <div class="modal-content modal-with-map">
                     <div class="modal-header">
                         <h3 id="addressModalTitle">Thêm địa chỉ mới</h3>
                         <button class="modal-close" onclick="closeAddressModal()">
@@ -340,6 +398,8 @@ function displayUserProfile(user) {
                     </div>
                     <form id="addressForm" onsubmit="event.preventDefault(); saveAddress();">
                         <input type="hidden" id="addressId">
+                        <input type="hidden" id="latitude">
+                        <input type="hidden" id="longitude">
                         <div class="form-group">
                             <label class="form-label">Tên người nhận *</label>
                             <input type="text" class="form-input" id="tenNguoiNhan" required maxlength="100">
@@ -351,8 +411,30 @@ function displayUserProfile(user) {
                         </div>
                         <div class="form-group">
                             <label class="form-label">Địa chỉ chi tiết *</label>
-                            <textarea class="form-input" id="diaChiChiTiet" rows="3" required maxlength="500"></textarea>
+                            <div class="address-input-group">
+                                <textarea class="form-input" id="diaChiChiTiet" rows="3" required maxlength="500" 
+                                          placeholder="Nhập địa chỉ hoặc chọn trên bản đồ"></textarea>
+                            </div>
                         </div>
+                        
+                        <div class="map-controls">
+                            <button type="button" class="btn btn-sm secondary" onclick="searchAddressOnMap()">
+                                <i class="fas fa-search"></i> Tìm trên bản đồ
+                            </button>
+                            <button type="button" class="btn btn-sm secondary" onclick="getCurrentLocationForAddress()">
+                                <i class="fas fa-location-arrow"></i> Vị trí hiện tại
+                            </button>
+                        </div>
+                        
+                        <div class="map-container">
+                            <div id="map"></div>
+                        </div>
+                        
+                        <div class="map-info">
+                            <i class="fas fa-info-circle"></i>
+                            <span>Bạn có thể kéo marker hoặc click vào bản đồ để chọn vị trí chính xác</span>
+                        </div>
+                        
                         <div class="modal-actions">
                             <button type="submit" class="btn btn-primary">
                                 <i class="fas fa-save"></i> Lưu
@@ -377,9 +459,69 @@ function displayUserProfile(user) {
     }
 }
 
-// Utility function to escape HTML
+// ============= UI STATE MANAGEMENT FUNCTIONS =============
+
+// Show loading state
+function showLoadingState() {
+    console.log('📊 Showing loading state...');
+    const loadingState = document.getElementById('loadingState');
+    const errorState = document.getElementById('errorState');
+    const profileContent = document.getElementById('profileContent');
+    
+    if (loadingState) {
+        loadingState.style.display = 'block';
+    }
+    if (errorState) {
+        errorState.style.display = 'none';
+    }
+    if (profileContent) {
+        profileContent.style.display = 'none';
+    }
+}
+
+// Show error state
+function showError(message) {
+    console.log('❌ Showing error:', message);
+    const loadingState = document.getElementById('loadingState');
+    const errorState = document.getElementById('errorState');
+    const profileContent = document.getElementById('profileContent');
+    const errorMessage = document.getElementById('errorMessage');
+    
+    if (loadingState) {
+        loadingState.style.display = 'none';
+    }
+    if (errorState) {
+        errorState.style.display = 'block';
+    }
+    if (profileContent) {
+        profileContent.style.display = 'none';
+    }
+    if (errorMessage) {
+        errorMessage.textContent = message;
+    }
+}
+
+// Show profile content
+function showProfileContent() {
+    console.log('✅ Showing profile content...');
+    const loadingState = document.getElementById('loadingState');
+    const errorState = document.getElementById('errorState');
+    const profileContent = document.getElementById('profileContent');
+    
+    if (loadingState) {
+        loadingState.style.display = 'none';
+    }
+    if (errorState) {
+        errorState.style.display = 'none';
+    }
+    if (profileContent) {
+        profileContent.style.display = 'block';
+    }
+}
+
+// HTML escape function to prevent XSS
 function escapeHtml(text) {
-    if (typeof text !== 'string') return '';
+    if (!text) return '';
     const map = {
         '&': '&amp;',
         '<': '&lt;',
@@ -387,42 +529,7 @@ function escapeHtml(text) {
         '"': '&quot;',
         "'": '&#039;'
     };
-    return text.replace(/[&<>"']/g, function(m) { return map[m]; });
-}
-
-// Show loading state
-function showLoadingState() {
-    const loadingElement = document.getElementById('loadingState');
-    const errorElement = document.getElementById('errorState');
-    const contentElement = document.getElementById('profileContent');
-    
-    if (loadingElement) loadingElement.style.display = 'block';
-    if (errorElement) errorElement.style.display = 'none';
-    if (contentElement) contentElement.style.display = 'none';
-}
-
-// Show profile content
-function showProfileContent() {
-    const loadingElement = document.getElementById('loadingState');
-    const errorElement = document.getElementById('errorState');
-    const contentElement = document.getElementById('profileContent');
-    
-    if (loadingElement) loadingElement.style.display = 'none';
-    if (errorElement) errorElement.style.display = 'none';
-    if (contentElement) contentElement.style.display = 'block';
-}
-
-// Show error message
-function showError(message) {
-    const loadingElement = document.getElementById('loadingState');
-    const errorElement = document.getElementById('errorState');
-    const contentElement = document.getElementById('profileContent');
-    const errorMessageElement = document.getElementById('errorMessage');
-    
-    if (loadingElement) loadingElement.style.display = 'none';
-    if (contentElement) contentElement.style.display = 'none';
-    if (errorElement) errorElement.style.display = 'block';
-    if (errorMessageElement) errorMessageElement.textContent = message;
+    return text.toString().replace(/[&<>"']/g, m => map[m]);
 }
 
 // Switch between tabs
@@ -456,6 +563,7 @@ function toggleEditMode() {
     const editBtn = document.getElementById('editProfileBtn');
     const saveBtn = document.getElementById('saveProfileBtn');
     const cancelBtn = document.getElementById('cancelProfileBtn');
+    const mapControls = document.getElementById('profileMapControls');
     
     editableFields.forEach(fieldId => {
         const field = document.getElementById(fieldId);
@@ -468,16 +576,99 @@ function toggleEditMode() {
         if (editBtn) editBtn.style.display = 'none';
         if (saveBtn) saveBtn.style.display = 'inline-block';
         if (cancelBtn) cancelBtn.style.display = 'inline-block';
+        if (mapControls) mapControls.style.display = 'block';
         
         // Focus on first editable field
         const firstField = document.getElementById('tenNguoiDung');
         if (firstField) {
             setTimeout(() => firstField.focus(), 100);
         }
+        
+        // Khởi tạo bản đồ cho profile
+        setTimeout(() => {
+            console.log('🗺️ Bắt đầu khởi tạo bản đồ cho profile...');
+            
+            const mapContainer = document.getElementById('profileMap');
+            if (!mapContainer) {
+                console.error('❌ Không tìm thấy profileMap container');
+                return;
+            }
+            
+            console.log('📦 Container profileMap found, dimensions:', 
+                mapContainer.offsetWidth, 'x', mapContainer.offsetHeight);
+            
+            if (typeof L === 'undefined') {
+                console.error('❌ Leaflet chưa được load!');
+                alert('Thư viện bản đồ chưa sẵn sàng. Vui lòng refresh trang.');
+                return;
+            }
+            
+            if (window.mapsHelper) {
+                // Lấy tọa độ từ user nếu có, nếu không dùng tọa độ mặc định (HCM)
+                const lat = currentUser?.latitude || 10.762622;
+                const lng = currentUser?.longitude || 106.660172;
+                
+                console.log('📍 Khởi tạo bản đồ tại tọa độ:', lat, lng);
+                const mapInstance = window.mapsHelper.initMap('profileMap', lat, lng);
+                
+                if (mapInstance) {
+                    console.log('✅ Bản đồ profile đã được khởi tạo thành công');
+                    
+                    // Force invalidate size nhiều lần để đảm bảo bản đồ hiển thị
+                    setTimeout(() => {
+                        if (mapInstance) {
+                            mapInstance.invalidateSize();
+                            console.log('🔄 Map size invalidated (1st time)');
+                        }
+                    }, 200);
+                    
+                    setTimeout(() => {
+                        if (mapInstance) {
+                            mapInstance.invalidateSize();
+                            console.log('🔄 Map size invalidated (2nd time)');
+                        }
+                    }, 500);
+                    
+                    // Thiết lập callback để cập nhật tọa độ vào hidden fields
+                    window.updateProfileCoordinates = function(lat, lng) {
+                        const latField = document.getElementById('profileLatitude');
+                        const lngField = document.getElementById('profileLongitude');
+                        
+                        if (latField) latField.value = lat;
+                        if (lngField) lngField.value = lng;
+                        
+                        console.log('📍 Tọa độ profile đã cập nhật:', lat, lng);
+                        
+                        // Luôn enable textarea trước khi cập nhật địa chỉ
+                        const diaChiField = document.getElementById('diaChi');
+                        if (diaChiField) {
+                            diaChiField.disabled = false;
+                            diaChiField.readOnly = false;
+                            console.log('🔓 Enabled diaChi field để cập nhật địa chỉ');
+                            
+                            // Gọi reverse geocode với targetElementId = 'diaChi'
+                            if (typeof reverseGeocode === 'function') {
+                                setTimeout(() => {
+                                    reverseGeocode(lat, lng, 'diaChi');
+                                }, 100);
+                            }
+                        }
+                    };
+                } else {
+                    console.error('❌ Không thể khởi tạo bản đồ profile');
+                    alert('Không thể khởi tạo bản đồ. Vui lòng kiểm tra kết nối internet và thử lại.');
+                }
+            } else {
+                console.error('❌ window.mapsHelper chưa sẵn sàng');
+                alert('Hệ thống bản đồ chưa sẵn sàng. Vui lòng refresh trang.');
+            }
+        }, 800);
+        
     } else {
         if (editBtn) editBtn.style.display = 'inline-block';
         if (saveBtn) saveBtn.style.display = 'none';
         if (cancelBtn) cancelBtn.style.display = 'none';
+        if (mapControls) mapControls.style.display = 'none';
         
         // Clear any validation errors when exiting edit mode
         clearFormErrors();
@@ -504,6 +695,7 @@ function cancelEdit() {
         const editBtn = document.getElementById('editProfileBtn');
         const saveBtn = document.getElementById('saveProfileBtn');
         const cancelBtn = document.getElementById('cancelProfileBtn');
+        const mapControls = document.getElementById('profileMapControls');
         
         // Disable all fields
         editableFields.forEach(fieldId => {
@@ -517,6 +709,7 @@ function cancelEdit() {
         if (editBtn) editBtn.style.display = 'inline-block';
         if (saveBtn) saveBtn.style.display = 'none';
         if (cancelBtn) cancelBtn.style.display = 'none';
+        if (mapControls) mapControls.style.display = 'none';
         
         // Reset edit mode flag
         isEditMode = false;
@@ -559,7 +752,7 @@ async function saveProfile() {
             currentUser = result.data;
             isEditMode = false;
             toggleEditMode();
-            showToast('Thành công!', 'Cập nhật thông tin thành công!', 'success');
+            showToast('Thành công!', 'Cập nhật thông tin thành công!', 'success', 3000);
             
             // Update localStorage user data
             const userData = localStorage.getItem('user');
@@ -615,9 +808,9 @@ async function changePassword() {
 
         if (result.success) {
             resetPasswordForm();
-            showToast('Thành công!', 'Đổi mật khẩu thành công!', 'success');
+            showToast('Thành công!', 'Đổi mật khẩu thành công!', 'success', 3000);
         } else {
-            showToast('Lỗi!', 'Lỗi: ' + result.message, 'error');
+            showToast('Lỗi!', 'Lỗi: ' + result.message, 'error', 3000);
         }
 
     } catch (error) {
@@ -784,7 +977,7 @@ async function uploadAvatar(file) {
 
         if (result.success) {
             console.log('Upload successful');
-            showToast('Thành công!', 'Cập nhật ảnh đại diện thành công!', 'success');
+            showToast('Thành công!', 'Cập nhật ảnh đại diện thành công!', 'success', 3000);
             // Refresh profile data
             console.log('Refreshing profile data...');
             await loadUserProfile();
@@ -803,7 +996,7 @@ async function uploadAvatar(file) {
 }
 
 // Show toast notification
-function showToast(title, message, type = 'success') {
+function showToast(title, message, type = 'success', duration = 3000) {
     // Remove existing toast
     const existingToast = document.querySelector('.toast');
     if (existingToast) {
@@ -834,10 +1027,10 @@ function showToast(title, message, type = 'success') {
         toast.classList.add('show');
     }, 100);
 
-    // Auto hide after 3 seconds
+    // Auto hide after duration
     const autoHide = setTimeout(() => {
         hideToast(toast);
-    }, 3000);
+    }, duration);
 
     // Close button event
     const closeBtn = toast.querySelector('.toast-close');
@@ -907,6 +1100,7 @@ function displayAddresses() {
 
     let html = '<div class="addresses-list">';
     addresses.forEach(addr => {
+        // Không hiển thị map ở đây - chỉ hiển thị thông tin địa chỉ
         html += `
             <div class="address-card ${addr.macDinh ? 'default' : ''}">
                 <div class="address-header">
@@ -939,29 +1133,94 @@ function displayAddresses() {
     `;
     
     container.innerHTML = html;
+    
+    // KHÔNG hiển thị bản đồ ở đây nữa
+    // Map chỉ hiển thị khi thêm/sửa địa chỉ trong modal
 }
 
 // Show add address modal
 function showAddAddressModal() {
+    console.log('🏠 Mở modal thêm địa chỉ mới');
     const modal = document.getElementById('addressModal');
+    if (!modal) {
+        console.error('❌ Không tìm thấy addressModal');
+        return;
+    }
+    
     document.getElementById('addressModalTitle').textContent = 'Thêm địa chỉ mới';
     document.getElementById('addressForm').reset();
     document.getElementById('addressId').value = '';
     modal.style.display = 'flex';
+    
+    // Khởi tạo OpenStreetMap sau khi modal hiển thị
+    setTimeout(() => {
+        console.log('🗺️ Đang khởi tạo bản đồ...');
+        if (typeof L === 'undefined') {
+            console.error('❌ Leaflet chưa được load!');
+            alert('Thư viện bản đồ chưa được tải. Vui lòng refresh trang và thử lại.');
+            return;
+        }
+        
+        if (window.mapsHelper) {
+            const mapInstance = window.mapsHelper.initMap('map', 10.762622, 106.660172);
+            if (mapInstance) {
+                console.log('✅ Bản đồ đã được khởi tạo thành công');
+                window.mapsHelper.initAutocomplete('diaChiChiTiet');
+            } else {
+                console.error('❌ Không thể khởi tạo bản đồ');
+            }
+        } else {
+            console.error('❌ window.mapsHelper chưa sẵn sàng');
+            alert('Hệ thống bản đồ chưa sẵn sàng. Vui lòng refresh trang và thử lại.');
+        }
+    }, 500); // Tăng timeout lên 500ms để đảm bảo modal đã hiển thị hoàn toàn
 }
 
 // Edit address
 function editAddress(id) {
+    console.log('✏️ Sửa địa chỉ ID:', id);
     const addr = addresses.find(a => a.maDiaChi === id);
-    if (!addr) return;
+    if (!addr) {
+        console.error('❌ Không tìm thấy địa chỉ với ID:', id);
+        return;
+    }
 
     document.getElementById('addressModalTitle').textContent = 'Chỉnh sửa địa chỉ';
     document.getElementById('addressId').value = addr.maDiaChi;
     document.getElementById('tenNguoiNhan').value = addr.tenNguoiNhan;
     document.getElementById('soDienThoaiAddress').value = addr.soDienThoai;
     document.getElementById('diaChiChiTiet').value = addr.diaChiChiTiet;
+    document.getElementById('latitude').value = addr.latitude || '';
+    document.getElementById('longitude').value = addr.longitude || '';
     
     document.getElementById('addressModal').style.display = 'flex';
+    
+    // Khởi tạo OpenStreetMap với vị trí của địa chỉ
+    setTimeout(() => {
+        console.log('🗺️ Đang khởi tạo bản đồ cho địa chỉ hiện tại...');
+        if (typeof L === 'undefined') {
+            console.error('❌ Leaflet chưa được load!');
+            alert('Thư viện bản đồ chưa được tải. Vui lòng refresh trang và thử lại.');
+            return;
+        }
+        
+        if (window.mapsHelper) {
+            const lat = addr.latitude || 10.762622;
+            const lng = addr.longitude || 106.660172;
+            console.log('📍 Tọa độ:', lat, lng);
+            
+            const mapInstance = window.mapsHelper.initMap('map', lat, lng);
+            if (mapInstance) {
+                console.log('✅ Bản đồ đã được khởi tạo thành công');
+                window.mapsHelper.initAutocomplete('diaChiChiTiet');
+            } else {
+                console.error('❌ Không thể khởi tạo bản đồ');
+            }
+        } else {
+            console.error('❌ window.mapsHelper chưa sẵn sàng');
+            alert('Hệ thống bản đồ chưa sẵn sàng. Vui lòng refresh trang và thử lại.');
+        }
+    }, 500);
 }
 
 // Save address
@@ -973,11 +1232,15 @@ async function saveAddress() {
     }
 
     const addressId = document.getElementById('addressId').value;
+    const latitude = document.getElementById('latitude').value;
+    const longitude = document.getElementById('longitude').value;
+    
     const data = {
         tenNguoiNhan: document.getElementById('tenNguoiNhan').value.trim(),
         soDienThoai: document.getElementById('soDienThoaiAddress').value.trim(),
-        diaChiChiTiet: document.getElementById('diaChiChiTiet').value.trim()
-        // Không gửi macDinh - luôn là false khi người dùng tự thêm
+        diaChiChiTiet: document.getElementById('diaChiChiTiet').value.trim(),
+        latitude: latitude ? parseFloat(latitude) : null,
+        longitude: longitude ? parseFloat(longitude) : null
     };
 
     const token = localStorage.getItem('jwtToken');
@@ -998,7 +1261,7 @@ async function saveAddress() {
 
         const result = await response.json();
         if (result.success) {
-            showToast('Thành công!', addressId ? 'Cập nhật địa chỉ thành công' : 'Thêm địa chỉ thành công', 'success');
+            showToast('Thành công!', addressId ? 'Cập nhật địa chỉ thành công' : 'Thêm địa chỉ thành công', 'success', 3000);
             closeAddressModal();
             loadAddresses();
         } else {
@@ -1068,4 +1331,86 @@ async function deleteAddress(id) {
 function closeAddressModal() {
     document.getElementById('addressModal').style.display = 'none';
     document.getElementById('addressForm').reset();
+}
+
+// Tìm địa chỉ trên bản đồ
+function searchAddressOnMap() {
+    console.log('🔍 Tìm địa chỉ trên bản đồ...');
+    const addressInput = document.getElementById('diaChiChiTiet');
+    const address = addressInput ? addressInput.value.trim() : '';
+    
+    if (!address) {
+        showToast('Thông báo', 'Vui lòng nhập địa chỉ trước', 'error');
+        return;
+    }
+    
+    if (window.mapsHelper && window.mapsHelper.geocodeAddress) {
+        console.log('📍 Đang tìm kiếm:', address);
+        window.mapsHelper.geocodeAddress(address, (coords) => {
+            console.log('✅ Tìm thấy tọa độ:', coords);
+            showToast('Thành công', 'Đã tìm thấy địa chỉ trên bản đồ', 'success');
+        });
+    } else {
+        console.error('❌ Hệ thống bản đồ chưa sẵn sàng');
+        showToast('Lỗi', 'Hệ thống bản đồ chưa sẵn sàng', 'error');
+    }
+}
+
+// Lấy vị trí hiện tại
+function getCurrentLocationForAddress() {
+    console.log('📍 Đang lấy vị trí hiện tại...');
+    if (window.mapsHelper && window.mapsHelper.getCurrentLocation) {
+        window.mapsHelper.getCurrentLocation((coords) => {
+            console.log('✅ Đã lấy vị trí hiện tại:', coords);
+            showToast('Thành công', 'Đã lấy vị trí hiện tại', 'success');
+        });
+    } else {
+        console.error('❌ Hệ thống bản đồ chưa sẵn sàng');
+        showToast('Lỗi', 'Không thể lấy vị trí hiện tại', 'error');
+    }
+}
+
+// ============= PROFILE MAP FUNCTIONS =============
+
+// Tìm địa chỉ trên bản đồ profile
+function searchProfileAddressOnMap() {
+    console.log('🔍 Tìm địa chỉ profile trên bản đồ...');
+    const addressInput = document.getElementById('diaChi');
+    const address = addressInput ? addressInput.value.trim() : '';
+    
+    if (!address) {
+        showToast('Thông báo', 'Vui lòng nhập địa chỉ trước', 'error');
+        return;
+    }
+    
+    if (window.mapsHelper && window.mapsHelper.geocodeAddress) {
+        console.log('📍 Đang tìm kiếm địa chỉ profile:', address);
+        window.mapsHelper.geocodeAddress(address, (coords) => {
+            console.log('✅ Tìm thấy tọa độ profile:', coords);
+            if (window.updateProfileCoordinates) {
+                window.updateProfileCoordinates(coords.lat, coords.lng);
+            }
+            showToast('Thành công', 'Đã tìm thấy địa chỉ trên bản đồ', 'success');
+        });
+    } else {
+        console.error('❌ Hệ thống bản đồ chưa sẵn sàng');
+        showToast('Lỗi', 'Hệ thống bản đồ chưa sẵn sàng', 'error');
+    }
+}
+
+// Lấy vị trí hiện tại cho profile
+function getProfileCurrentLocation() {
+    console.log('📍 Đang lấy vị trí hiện tại cho profile...');
+    if (window.mapsHelper && window.mapsHelper.getCurrentLocation) {
+        window.mapsHelper.getCurrentLocation((coords) => {
+            console.log('✅ Đã lấy vị trí hiện tại profile:', coords);
+            if (window.updateProfileCoordinates) {
+                window.updateProfileCoordinates(coords.lat, coords.lng);
+            }
+            showToast('Thành công', 'Đã lấy vị trí hiện tại', 'success');
+        });
+    } else {
+        console.error('❌ Hệ thống bản đồ chưa sẵn sàng');
+        showToast('Lỗi', 'Không thể lấy vị trí hiện tại', 'error');
+    }
 }

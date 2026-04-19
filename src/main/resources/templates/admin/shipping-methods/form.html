@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${isEdit ? 'Chỉnh sửa Phương thức vận chuyển' : 'Thêm Phương thức vận chuyển'}">Phương thức vận chuyển</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" th:href="@{/css/admin/dashboard.css}">
+    <link rel="stylesheet" th:href="@{/css/admin/shipping-methods/form.css}">
+    <link rel="stylesheet" th:href="@{/css/admin/shipping-methods/shipping-methods.css}">
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div th:replace="~{admin/fragments/navbar :: navbar}"></div>
+
+            <!-- Main Content -->
+            <main class="main-content">
+                <!-- Header -->
+                <div th:replace="~{admin/fragments/header :: header}"></div>
+
+                <div class="stats-container">
+                    <div class="form-container">
+                        <!-- Form Header -->
+                        <div class="form-header">
+                            <div class="form-header-icon">
+                                <i class="fas" th:classappend="${isEdit ? 'fa-edit' : 'fa-plus-circle'}"></i>
+                            </div>
+                            <div class="form-header-content">
+                                <h4 th:text="${isEdit ? 'Chỉnh sửa Phương thức vận chuyển' : 'Thêm Phương thức vận chuyển mới'}">Thêm Phương thức vận chuyển</h4>
+                                <p class="form-header-subtitle">Điền đầy đủ thông tin bên dưới</p>
+                            </div>
+                        </div>
+
+                        <!-- Form -->
+                        <form th:action="${isEdit ? '/admin/shipping-methods/edit/' + shippingMethod.maPhuongThuc : '/admin/shipping-methods/add'}" 
+                              th:object="${shippingMethod}" 
+                              method="post"
+                              class="needs-validation"
+                              novalidate>
+                            
+                            <!-- Tên nhà vận chuyển -->
+                            <div class="form-group-custom">
+                                <label for="tenNhaVanChuyen" class="form-label-custom required">
+                                    <i class="fas fa-truck me-2"></i>Tên nhà vận chuyển
+                                </label>
+                                <div class="input-group-custom">
+                                    <input type="text" 
+                                           class="form-control-custom" 
+                                           id="tenNhaVanChuyen" 
+                                           th:field="*{tenNhaVanChuyen}"
+                                           th:classappend="${#fields.hasErrors('tenNhaVanChuyen')} ? 'is-invalid' : ''"
+                                           placeholder="VD: Giao hàng nhanh, Giao hàng tiết kiệm..."
+                                           required>
+                                    <div class="input-icon">
+                                        <i class="fas fa-shipping-fast"></i>
+                                    </div>
+                                </div>
+                                <div class="invalid-feedback-custom" th:if="${#fields.hasErrors('tenNhaVanChuyen')}" 
+                                     th:errors="*{tenNhaVanChuyen}"></div>
+                            </div>
+
+                            <div class="row">
+                                <!-- Phí vận chuyển -->
+                                <div class="col-md-6">
+                                    <div class="form-group-custom">
+                                        <label for="phiVanChuyen" class="form-label-custom required">
+                                            <i class="fas fa-money-bill-wave me-2"></i>Phí vận chuyển (VNĐ)
+                                        </label>
+                                        <div class="input-group-custom">
+                                            <input type="number" 
+                                                   class="form-control-custom" 
+                                                   id="phiVanChuyen" 
+                                                   th:field="*{phiVanChuyen}"
+                                                   th:classappend="${#fields.hasErrors('phiVanChuyen')} ? 'is-invalid' : ''"
+                                                   min="0"
+                                                   step="1000"
+                                                   placeholder="VD: 30000"
+                                                   required>
+                                            <div class="input-icon">
+                                                <i class="fas fa-dollar-sign"></i>
+                                            </div>
+                                        </div>
+                                        <div class="form-text-custom">
+                                            <i class="fas fa-info-circle me-1"></i>Nhập số tiền theo đơn vị VNĐ
+                                        </div>
+                                        <div class="invalid-feedback-custom" th:if="${#fields.hasErrors('phiVanChuyen')}" 
+                                             th:errors="*{phiVanChuyen}"></div>
+                                    </div>
+                                </div>
+
+                                <!-- Thời gian giao hàng -->
+                                <div class="col-md-6">
+                                    <div class="form-group-custom">
+                                        <label for="thoiGianGiaoHangDuKien" class="form-label-custom">
+                                            <i class="fas fa-clock me-2"></i>Thời gian giao hàng dự kiến
+                                        </label>
+                                        <div class="input-group-custom">
+                                            <input type="text" 
+                                                   class="form-control-custom" 
+                                                   id="thoiGianGiaoHangDuKien" 
+                                                   th:field="*{thoiGianGiaoHangDuKien}"
+                                                   placeholder="VD: 2-3 ngày, Giao hỏa tốc trong 24h">
+                                            <div class="input-icon">
+                                                <i class="fas fa-history"></i>
+                                            </div>
+                                        </div>
+                                        <div class="form-text-custom">
+                                            <i class="fas fa-lightbulb me-1"></i>Ví dụ: "2-3 ngày", "Trong 24h"
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <!-- Thứ tự -->
+                                <div class="col-md-6">
+                                    <div class="form-group-custom">
+                                        <label for="thuTu" class="form-label-custom">
+                                            <i class="fas fa-sort-numeric-up me-2"></i>Thứ tự hiển thị
+                                        </label>
+                                        <div class="input-group-custom">
+                                            <input type="number" 
+                                                   class="form-control-custom" 
+                                                   id="thuTu" 
+                                                   th:field="*{thuTu}"
+                                                   min="0"
+                                                   placeholder="0">
+                                            <div class="input-icon">
+                                                <i class="fas fa-list-ol"></i>
+                                            </div>
+                                        </div>
+                                        <div class="form-text-custom">
+                                            <i class="fas fa-arrow-up me-1"></i>Số thứ tự càng nhỏ, hiển thị càng trước
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Trạng thái -->
+                                <div class="col-md-6">
+                                    <div class="form-group-custom">
+                                        <label for="trangThai" class="form-label-custom">
+                                            <i class="fas fa-toggle-on me-2"></i>Trạng thái
+                                        </label>
+                                        <div class="select-wrapper">
+                                            <select class="form-select-custom" id="trangThai" th:field="*{trangThai}">
+                                                <option th:value="true">
+                                                    <i class="fas fa-check-circle"></i> Hoạt động
+                                                </option>
+                                                <option th:value="false">
+                                                    <i class="fas fa-times-circle"></i> Ngưng hoạt động
+                                                </option>
+                                            </select>
+                                            <div class="select-icon">
+                                                <i class="fas fa-chevron-down"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Mô tả -->
+                            <div class="form-group-custom">
+                                <label for="moTa" class="form-label-custom">
+                                    <i class="fas fa-align-left me-2"></i>Mô tả
+                                </label>
+                                <textarea class="form-control-custom textarea-custom" 
+                                          id="moTa" 
+                                          th:field="*{moTa}"
+                                          rows="4"
+                                          placeholder="Mô tả chi tiết về phương thức vận chuyển..."></textarea>
+                                <div class="form-text-custom">
+                                    <i class="fas fa-pencil-alt me-1"></i>Mô tả chi tiết sẽ giúp khách hàng hiểu rõ hơn
+                                </div>
+                                <div class="invalid-feedback-custom" th:if="${#fields.hasErrors('moTa')}" 
+                                     th:errors="*{moTa}"></div>
+                            </div>
+
+                            <!-- Form Actions -->
+                            <div class="form-actions">
+                                <a th:href="@{/admin/shipping-methods}" class="btn-custom btn-secondary-custom">
+                                    <i class="fas fa-arrow-left me-2"></i>Quay lại
+                                </a>
+                                <button type="submit" class="btn-custom btn-primary-custom">
+                                    <i class="fas fa-save me-2"></i>
+                                    <span th:text="${isEdit ? 'Cập nhật' : 'Thêm mới'}">Lưu</span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+    
+    <!-- Toast Container -->
+    <div id="toastContainer"></div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script th:src="@{/js/admin/dashboard.js}"></script>
+    <script th:inline="javascript">
+	    /*<![CDATA[*/
+	    // Toast notification function - FIXED
+	    function showToast(type, title, message) {
+	        const toastContainer = document.getElementById('toastContainer');
+	        if (!toastContainer) {
+	            console.error('Toast container not found');
+	            // Create toast container if it doesn't exist
+	            const container = document.createElement('div');
+	            container.id = 'toastContainer';
+	            document.body.appendChild(container);
+	            return showToast(type, title, message);
+	        }
+	
+	        const toastId = 'toast-' + Date.now();
+	        const iconClass = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle';
+	        
+	        const toastHTML = `
+	            <div id="${toastId}" class="toast toast-${type}">
+	                <div class="toast-icon">
+	                    <i class="fas ${iconClass}"></i>
+	                </div>
+	                <div class="toast-content">
+	                    <div class="toast-title">${title}</div>
+	                    <div class="toast-message">${message}</div>
+	                </div>
+	                <button class="toast-close" onclick="closeToast('${toastId}')">
+	                    <i class="fas fa-times"></i>
+	                </button>
+	            </div>
+	        `;
+	        
+	        toastContainer.insertAdjacentHTML('beforeend', toastHTML);
+	        
+	        const toast = document.getElementById(toastId);
+	        // Force reflow
+	        toast.offsetHeight;
+	        // Add show class
+	        setTimeout(() => toast.classList.add('show'), 10);
+	        
+	        // Auto remove after 5 seconds
+	        setTimeout(() => closeToast(toastId), 5000);
+	    }
+	
+	    function closeToast(toastId) {
+	        const toast = document.getElementById(toastId);
+	        if (toast) {
+	            toast.classList.remove('show');
+	            toast.classList.add('hide');
+	            setTimeout(() => {
+	                if (toast.parentNode) {
+	                    toast.parentNode.removeChild(toast);
+	                }
+	            }, 300);
+	        }
+	    }
+	
+	    // Show messages from server - FIXED
+	    document.addEventListener('DOMContentLoaded', function() {
+	        // Check for server-side messages
+	        const successMessage = /*[[${successMessage}]]*/ null;
+	        const errorMessage = /*[[${errorMessage}]]*/ null;
+	        
+	        console.log('Success message:', successMessage);
+	        console.log('Error message:', errorMessage);
+	        
+	        if (successMessage && successMessage !== 'null') {
+	            setTimeout(() => {
+	                showToast('success', 'Thành công', successMessage);
+	            }, 500);
+	        }
+	        
+	        if (errorMessage && errorMessage !== 'null') {
+	            setTimeout(() => {
+	                showToast('error', 'Lỗi', errorMessage);
+	            }, 500);
+	        }
+	
+	        // Form submission handling
+	        const form = document.querySelector('form');
+	        if (form) {
+	            form.addEventListener('submit', function(e) {
+	                const submitBtn = this.querySelector('button[type="submit"]');
+	                if (submitBtn) {
+	                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Đang xử lý...';
+	                    submitBtn.disabled = true;
+	                }
+	            });
+	        }
+	    });
+	
+	    // Form validation
+	    (function() {
+	        'use strict';
+	        const forms = document.querySelectorAll('.needs-validation');
+	        Array.from(forms).forEach(function(form) {
+	            form.addEventListener('submit', function(event) {
+	                if (!form.checkValidity()) {
+	                    event.preventDefault();
+	                    event.stopPropagation();
+	                    
+	                    // Show error toast
+	                    showToast('error', 'Lỗi nhập liệu', 'Vui lòng kiểm tra lại các trường bắt buộc');
+	                }
+	                form.classList.add('was-validated');
+	            }, false);
+	        });
+	    })();
+	    /*]]>*/
+	</script>
+</body>
+</html>

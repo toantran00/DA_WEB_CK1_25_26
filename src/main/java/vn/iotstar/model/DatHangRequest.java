@@ -12,4 +12,5 @@ public class DatHangRequest {
     private String diaChiGiaoHang; // Fallback nếu không có địa chỉ nào trong danh sách
     private String soDienThoai;
     private String phuongThucThanhToan;
+    private Integer maPhuongThuc; // ID của phương thức vận chuyển được chọn
 }

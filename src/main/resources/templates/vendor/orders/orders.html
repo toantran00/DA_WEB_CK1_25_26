@@ -302,19 +302,21 @@
 										         th:classappend="${order.trangThai == 'Chờ xác nhận'} ? 'pending' : 
 										                        (${order.trangThai == 'Đã xác nhận'} ? 'confirmed' : 
 										                        (${order.trangThai == 'Đang giao'} ? 'shipping' : 
-										                        (${order.trangThai == 'Hoàn thành'} ? 'completed' : 'cancelled')))"
+										                        (${order.trangThai == 'Hoàn thành'} ? 'completed' : 
+										                        (${order.trangThai == 'Banking'} ? 'banking' : 'cancelled'))))"
 										         th:data-order-id="${order.maDatHang}"
 										         th:data-current-status="${order.trangThai}"
 										         th:attr="data-lydohuy=${order.trangThai == 'Hủy' and order.lyDoHuy != null} ? ${order.lyDoHuy} : ''"
-										         th:onclick="${order.trangThai != 'Hoàn thành' and order.trangThai != 'Hủy'} ? 'showStatusModal(this)' : ''">
+										         th:onclick="${order.trangThai != 'Hoàn thành' and order.trangThai != 'Hủy' and order.trangThai != 'Banking'} ? 'showStatusModal(this)' : ''">
 										        <i class="fas" 
 										           th:classappend="${order.trangThai == 'Chờ xác nhận'} ? 'fa-clock' : 
 										                          (${order.trangThai == 'Đã xác nhận'} ? 'fa-check-circle' : 
 										                          (${order.trangThai == 'Đang giao'} ? 'fa-shipping-fast' : 
-										                          (${order.trangThai == 'Hoàn thành'} ? 'fa-check-double' : 'fa-times-circle')))"></i>
+										                          (${order.trangThai == 'Hoàn thành'} ? 'fa-check-double' : 
+										                          (${order.trangThai == 'Banking'} ? 'fa-credit-card' : 'fa-times-circle'))))"></i>
 										        <span th:text="${order.trangThai}">Chờ xác nhận</span>
-										        <i th:if="${order.trangThai != 'Hoàn thành' and order.trangThai != 'Hủy'}" class="fas fa-chevron-down ms-1"></i>
-										        <small th:if="${order.trangThai == 'Hoàn thành' or order.trangThai == 'Hủy'}" class="ms-1 text-muted">(Khóa)</small>
+										        <i th:if="${order.trangThai != 'Hoàn thành' and order.trangThai != 'Hủy' and order.trangThai != 'Banking'}" class="fas fa-chevron-down ms-1"></i>
+										        <small th:if="${order.trangThai == 'Hoàn thành' or order.trangThai == 'Hủy' or order.trangThai == 'Banking'}" class="ms-1 text-muted">(Khóa)</small>
 										        
 										        <!-- Tooltip hiển thị lý do hủy -->
 										        <div th:if="${order.trangThai == 'Hủy' and order.lyDoHuy != null}" 

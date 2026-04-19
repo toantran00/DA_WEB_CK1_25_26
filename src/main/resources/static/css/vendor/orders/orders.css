@@ -828,6 +828,13 @@
     border: 1px solid rgba(231, 76, 60, 0.3);
 }
 
+/* Banking - Màu vàng cam (chờ xác nhận thanh toán) */
+.status-badge.status-banking {
+    background: rgba(255, 152, 0, 0.15);
+    color: #ff9800;
+    border: 1px solid rgba(255, 152, 0, 0.3);
+}
+
 /* Status Select Replacement */
 .status-display {
     padding: 8px 16px;
@@ -886,6 +893,14 @@
     background: rgba(231, 76, 60, 0.15);
     color: #e74c3c;
     border-color: rgba(231, 76, 60, 0.3);
+}
+
+/* Banking - Màu vàng cam (chờ xác nhận thanh toán) */
+.status-display.banking {
+    background: rgba(255, 152, 0, 0.15);
+    color: #ff9800;
+    border-color: rgba(255, 152, 0, 0.3);
+    cursor: not-allowed;
 }
 
 /* ============= DATE RANGE FILTER ============= */

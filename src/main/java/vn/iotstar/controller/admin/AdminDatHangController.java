@@ -60,6 +60,7 @@ public class AdminDatHangController {
             @RequestParam(required = false) Integer maCuaHang,
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate,
+            @RequestParam(required = false, defaultValue = "all") String view,
             Authentication authentication,
             Model model) {
         
@@ -69,19 +70,36 @@ public class AdminDatHangController {
         
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "maDatHang"));
         
-        // Xử lý trạng thái rỗng thành null
-        if (trangThai != null && trangThai.isEmpty()) {
-            trangThai = null;
+        // Xử lý view: nếu là "banking" thì chỉ lấy đơn hàng có trạng thái "Banking"
+        // Nếu là "all" thì lấy tất cả NGOẠI TRỪ "Banking"
+        String effectiveTrangThai = trangThai;
+        if ("banking".equals(view)) {
+            effectiveTrangThai = "Banking";
+        } else if ("all".equals(view)) {
+            // Không lọc theo trạng thái cụ thể, nhưng sẽ loại bỏ Banking trong query
+            // Xử lý này sẽ được thực hiện trong service
         }
         
-        // SỬ DỤNG TÊN MỚI
-        Page<DatHang> datHangPage = datHangService.findAllOrdersWithFilters(
-            keyword, startDate, endDate, trangThai, maCuaHang, pageable);
+        // Xử lý trạng thái rỗng thành null (chỉ cho view "all")
+        if (effectiveTrangThai != null && effectiveTrangThai.isEmpty() && "all".equals(view)) {
+            effectiveTrangThai = null;
+        }
+        
+        Page<DatHang> datHangPage;
+        if ("banking".equals(view)) {
+            // Chỉ lấy đơn hàng Banking
+            datHangPage = datHangService.findAllOrdersWithFilters(
+                keyword, startDate, endDate, "Banking", maCuaHang, pageable);
+        } else {
+            // Lấy tất cả đơn hàng NGOẠI TRỪ Banking
+            datHangPage = datHangService.findAllOrdersExcludingBanking(
+                keyword, startDate, endDate, effectiveTrangThai, maCuaHang, pageable);
+        }
         
         // Lấy danh sách cửa hàng cho filter
         List<CuaHang> cuaHangs = cuaHangService.findActiveStores();
         
-     // Tìm tên cửa hàng được chọn (nếu có)
+        // Tìm tên cửa hàng được chọn (nếu có)
         String selectedStoreName = "Unknown";
         if (maCuaHang != null) {
             selectedStoreName = cuaHangs.stream()
@@ -99,6 +117,7 @@ public class AdminDatHangController {
         orderStats.put("shipping", countOrdersByStatus("Đang giao"));
         orderStats.put("completed", countOrdersByStatus("Hoàn thành"));
         orderStats.put("cancelled", countOrdersByStatus("Hủy"));
+        orderStats.put("banking", countOrdersByStatus("Banking"));
          
         model.addAttribute("datHangPage", datHangPage);
         model.addAttribute("cuaHangs", cuaHangs);
@@ -110,6 +129,7 @@ public class AdminDatHangController {
         model.addAttribute("selectedStoreName", selectedStoreName);
         model.addAttribute("currentPage", page);
         model.addAttribute("orderStats", orderStats);
+        model.addAttribute("view", view);
         
         return "admin/orders/orders";
     }
@@ -421,5 +441,157 @@ public class AdminDatHangController {
         return allOrders.stream()
                 .filter(order -> trangThai.equals(order.getTrangThai()))
                 .count();
+    }
+    
+    @GetMapping("/pending-banking")
+    public String listPendingBankingOrders(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Integer maCuaHang,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate,
+            Authentication authentication,
+            Model model) {
+        
+        // Lấy thông tin user hiện tại
+        NguoiDung currentUser = userDetailsService.getCurrentUser(authentication);
+        model.addAttribute("user", currentUser);
+        
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "maDatHang"));
+        
+        // Chỉ lấy đơn hàng có trạng thái "Banking"
+        String trangThai = "Banking";
+        
+        Page<DatHang> datHangPage = datHangService.findAllOrdersWithFilters(
+            keyword, startDate, endDate, trangThai, maCuaHang, pageable);
+        
+        // Lấy danh sách cửa hàng cho filter
+        List<CuaHang> cuaHangs = cuaHangService.findActiveStores();
+        
+        // Tìm tên cửa hàng được chọn (nếu có)
+        String selectedStoreName = "Unknown";
+        if (maCuaHang != null) {
+            selectedStoreName = cuaHangs.stream()
+                    .filter(store -> store.getMaCuaHang().equals(maCuaHang))
+                    .findFirst()
+                    .map(CuaHang::getTenCuaHang)
+                    .orElse("Unknown (ID: " + maCuaHang + ")");
+        }
+        
+        // Thống kê đơn hàng cần duyệt
+        Map<String, Long> orderStats = new HashMap<>();
+        orderStats.put("totalBanking", countOrdersByStatus("Banking"));
+         
+        model.addAttribute("datHangPage", datHangPage);
+        model.addAttribute("cuaHangs", cuaHangs);
+        model.addAttribute("keyword", keyword);
+        model.addAttribute("startDate", startDate);
+        model.addAttribute("endDate", endDate);
+        model.addAttribute("maCuaHang", maCuaHang);
+        model.addAttribute("selectedStoreName", selectedStoreName);
+        model.addAttribute("currentPage", page);
+        model.addAttribute("orderStats", orderStats);
+        
+        return "admin/orders/pending-banking";
+    }
+    
+    @PostMapping("/confirm-banking/{id}")
+    @ResponseBody
+    public ResponseEntity<?> confirmBankingPayment(@PathVariable Integer id) {
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            DatHang datHang = datHangService.findByMaDatHang(id);
+            if (datHang == null) {
+                response.put("success", false);
+                response.put("message", "Đơn hàng không tồn tại");
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+            // Kiểm tra trạng thái hiện tại
+            if (!"Banking".equals(datHang.getTrangThai())) {
+                response.put("success", false);
+                response.put("message", "Đơn hàng không ở trạng thái chờ xác nhận thanh toán");
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+            // Cập nhật trạng thái đơn hàng sang "Chờ xác nhận"
+            datHang.setTrangThai("Chờ xác nhận");
+            datHangService.save(datHang);
+            
+            // Cập nhật trạng thái thanh toán sang "Pending"
+            try {
+                thanhToanService.updateTrangThaiByDatHang(id, "Pending");
+                response.put("paymentUpdated", true);
+            } catch (Exception e) {
+                response.put("paymentUpdated", false);
+                response.put("paymentMessage", "Cảnh báo: Không thể cập nhật trạng thái thanh toán: " + e.getMessage());
+            }
+            
+            response.put("success", true);
+            response.put("message", "Xác nhận thanh toán thành công! Đơn hàng đã chuyển sang 'Chờ xác nhận'");
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", "Lỗi: " + e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+    
+    @PostMapping("/bulk-confirm-banking")
+    @ResponseBody
+    public ResponseEntity<?> bulkConfirmBanking(@RequestParam("ids") List<Integer> ids) {
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            if (ids == null || ids.isEmpty()) {
+                response.put("success", false);
+                response.put("message", "Vui lòng chọn ít nhất một đơn hàng để xác nhận");
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+            int successCount = 0;
+            int errorCount = 0;
+            List<String> errorMessages = new ArrayList<>();
+            
+            for (Integer id : ids) {
+                try {
+                    DatHang datHang = datHangService.findByMaDatHang(id);
+                    if (datHang != null && "Banking".equals(datHang.getTrangThai())) {
+                        datHang.setTrangThai("Chờ xác nhận");
+                        datHangService.save(datHang);
+                        
+                        try {
+                            thanhToanService.updateTrangThaiByDatHang(id, "Pending");
+                        } catch (Exception e) {
+                            errorMessages.add("Cảnh báo: Không thể cập nhật thanh toán cho đơn hàng ID " + id);
+                        }
+                        
+                        successCount++;
+                    } else {
+                        errorCount++;
+                        errorMessages.add("Đơn hàng ID " + id + " không ở trạng thái Banking");
+                    }
+                } catch (Exception e) {
+                    errorCount++;
+                    errorMessages.add("Lỗi khi xác nhận đơn hàng ID " + id + ": " + e.getMessage());
+                }
+            }
+            
+            response.put("success", true);
+            response.put("message", "Đã xác nhận thanh toán cho " + successCount + " đơn hàng");
+            response.put("successCount", successCount);
+            response.put("errorCount", errorCount);
+            response.put("errors", errorMessages);
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", "Lỗi hệ thống: " + e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
     }
 }

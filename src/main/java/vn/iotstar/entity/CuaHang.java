@@ -46,6 +46,12 @@ public class CuaHang {
     @Column(name = "DiaChi", nullable = false, columnDefinition = "NVARCHAR(255)")
     private String diaChi;
     
+    @Column(name = "Latitude")
+    private Double latitude;
+    
+    @Column(name = "Longitude")
+    private Double longitude;
+    
     @NotBlank(message = "Số điện thoại không được để trống")
     @Pattern(regexp = "(84|0[3|5|7|8|9])+([0-9]{8})\\b", message = "Số điện thoại không hợp lệ")
     @Size(max = 20, message = "Số điện thoại không được quá 20 ký tự")

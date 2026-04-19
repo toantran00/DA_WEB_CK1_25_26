@@ -138,10 +138,11 @@
                                             <span><i class="fa-solid fa-phone"></i> Số điện thoại:</span>
                                             <span th:text="${order.soDienThoaiGiaoHang}"></span>
                                         </div>
-                                        <div th:if="${order.ghiChu}" class="summary-row">
-                                            <span><i class="fa-solid fa-note-sticky"></i> Ghi chú:</span>
-                                            <span th:text="${order.ghiChu}"></span>
-                                        </div>
+                                        <div class="summary-row">
+										    <span><i class="fa-solid fa-note-sticky"></i> Ghi chú:</span>
+										    <span th:text="${order.ghiChu ?: 'Không có'}" 
+										          th:class="${order.ghiChu} ? '' : 'text-muted'"></span>
+										</div>
                                     </div>
                                     <div class="summary-total">
                                         <span>Tổng tiền:</span>

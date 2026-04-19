@@ -25,6 +25,9 @@ public class CuaHangModel {
     @Size(max = 255, message = "Địa chỉ không được quá 255 ký tự")
     private String diaChi;
     
+    private Double latitude;
+    private Double longitude;
+    
     @NotBlank(message = "Số điện thoại không được để trống")
     @Pattern(regexp = "^0[0-9]{9}$", message = "Số điện thoại phải bắt đầu bằng 0 và có 10 chữ số")
     private String soDienThoai;

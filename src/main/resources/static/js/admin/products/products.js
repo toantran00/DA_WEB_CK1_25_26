@@ -36,7 +36,7 @@ function showToast(type, title, message) {
     // Auto close after 5 seconds
     setTimeout(() => {
         closeToast(toastId);
-    }, 5000);
+    }, 2000);
 }
 
 // Function to close toast
@@ -637,7 +637,7 @@ function exportSelectedToExcel() {
     // Tự động xóa iframe sau khi tải
     setTimeout(() => {
         document.body.removeChild(iframe);
-    }, 5000);
+    }, 2000);
 }
 
 // Replace existing exportToExcel function

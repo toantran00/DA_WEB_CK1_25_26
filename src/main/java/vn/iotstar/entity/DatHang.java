@@ -68,6 +68,16 @@ public class DatHang {
     @JoinColumn(name = "MaKhuyenMai")
     private KhuyenMai khuyenMai;
     
+    // Thêm quan hệ với PhuongThucVanChuyen
+    @ManyToOne
+    @JoinColumn(name = "MaPhuongThuc")
+    private PhuongThucVanChuyen phuongThucVanChuyen;
+    
+    // Phí vận chuyển thực tế áp dụng cho đơn hàng này
+    @Column(name = "PhiVanChuyen", precision = 18, scale = 2)
+    @Builder.Default
+    private BigDecimal phiVanChuyen = BigDecimal.ZERO;
+    
  // Thêm vào entity DatHang
     @ManyToOne
     @JoinColumn(name = "MaShipper")

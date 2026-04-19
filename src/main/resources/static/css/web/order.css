@@ -932,3 +932,146 @@
         padding: 12px;
     }
 }
+
+/* Shipping Methods - Giống với Payment Methods */
+.shipping-methods {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.shipping-option {
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    position: relative;
+}
+
+.shipping-option:hover {
+    border-color: #e94560;
+    box-shadow: 0 2px 8px rgba(233, 69, 96, 0.1);
+}
+
+.shipping-radio {
+    display: none;
+}
+
+.shipping-radio:checked + .shipping-label {
+    border-color: #e94560;
+}
+
+.shipping-radio:checked + .shipping-label .custom-radio {
+    border-color: #e94560;
+}
+
+.shipping-radio:checked + .shipping-label .custom-radio::after {
+    opacity: 1;
+    background: #e94560;
+}
+
+.shipping-label {
+    display: flex;
+    align-items: center;
+    padding: 15px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    border-radius: 10px;
+    transition: all 0.3s ease;
+    gap: 15px;
+}
+
+.shipping-icon {
+    font-size: 24px;
+    color: #e94560;
+    width: 40px;
+    text-align: center;
+}
+
+.shipping-info {
+    flex: 1;
+}
+
+.shipping-name {
+    font-weight: 600;
+    color: #0f3460;
+    margin-bottom: 4px;
+    font-size: 15px;
+}
+
+.shipping-desc {
+    color: #666;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.shipping-fee {
+    font-weight: 700;
+    color: #e94560;
+    font-size: 16px;
+    margin-left: auto;
+    white-space: nowrap;
+}
+
+/* Shipping Method Select */
+.shipping-select {
+    width: 100%;
+    padding: 12px 15px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 15px;
+    color: #0f3460;
+    background-color: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 500;
+}
+
+.shipping-select:hover {
+    border-color: #e94560;
+}
+
+.shipping-select:focus {
+    border-color: #e94560;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(233, 69, 96, 0.1);
+}
+
+.shipping-select option {
+    padding: 10px;
+    font-size: 14px;
+}
+
+.shipping-select option:disabled {
+    color: #999;
+}
+
+/* Form text for shipping info */
+.form-text.text-muted {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 8px;
+    font-size: 13px;
+    color: #666;
+}
+
+.form-text.text-muted i {
+    color: #e94560;
+}
+
+/* Alert trong shipping */
+.alert-warning {
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    color: #856404;
+    padding: 12px;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.alert-warning i {
+    color: #ffc107;
+}

@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đơn hàng đang chờ xác nhận - Pet Shop</title>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <link rel="stylesheet" th:href="@{/css/web/header.css}">
+    <link rel="stylesheet" th:href="@{/css/web/footer.css}">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .main-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 60px 20px;
+        }
+
+        .completion-card {
+            background: white;
+            border-radius: 25px;
+            box-shadow: 0 25px 70px rgba(0, 0, 0, 0.3);
+            max-width: 650px;
+            width: 100%;
+            padding: 50px 40px;
+            text-align: center;
+            animation: slideUp 0.5s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .icon-container {
+            margin-bottom: 30px;
+        }
+
+        .success-icon {
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto;
+            animation: pulse 2s infinite;
+        }
+
+        .success-icon i {
+            font-size: 60px;
+            color: white;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+        .completion-header h1 {
+            color: #333;
+            font-size: 32px;
+            margin-bottom: 15px;
+            font-weight: 700;
+        }
+
+        .completion-header p {
+            color: #666;
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 15px;
+            margin: 20px 0;
+            animation: glow 2s infinite;
+        }
+
+        @keyframes glow {
+            0%, 100% {
+                box-shadow: 0 0 20px rgba(255, 193, 7, 0.5);
+            }
+            50% {
+                box-shadow: 0 0 30px rgba(255, 193, 7, 0.8);
+            }
+        }
+
+        .info-box {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 30px 0;
+            text-align: left;
+        }
+
+        .info-box h3 {
+            color: #333;
+            font-size: 18px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .info-box h3 i {
+            color: #667eea;
+        }
+
+        .info-box ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .info-box li {
+            color: #555;
+            font-size: 14px;
+            padding: 10px 0;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .info-box li:last-child {
+            border-bottom: none;
+        }
+
+        .info-box li i {
+            color: #667eea;
+            font-size: 16px;
+            width: 20px;
+        }
+
+        .note-box {
+            background: #fff3cd;
+            border-left: 5px solid #ffc107;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 25px 0;
+            text-align: left;
+        }
+
+        .note-box h4 {
+            color: #856404;
+            font-size: 16px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .note-box p {
+            color: #856404;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .action-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .btn {
+            padding: 16px 30px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+
+        .btn-secondary:hover {
+            background: #f8f9fa;
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+        }
+
+        .btn-success:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(40, 167, 69, 0.4);
+        }
+
+        .order-summary {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 25px 0;
+        }
+
+        .order-summary h3 {
+            color: #333;
+            font-size: 18px;
+            margin-bottom: 15px;
+            text-align: left;
+        }
+
+        .order-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .order-item:last-child {
+            border-bottom: none;
+            font-weight: 700;
+            color: #667eea;
+            font-size: 16px;
+        }
+
+        .timeline {
+            margin: 30px 0;
+            padding: 25px;
+            background: #f8f9fa;
+            border-radius: 15px;
+        }
+
+        .timeline h3 {
+            color: #333;
+            font-size: 18px;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .timeline-item {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .timeline-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .timeline-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .timeline-icon.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .timeline-icon.pending {
+            background: #e0e0e0;
+            color: #999;
+        }
+
+        .timeline-content h4 {
+            color: #333;
+            font-size: 15px;
+            margin-bottom: 5px;
+        }
+
+        .timeline-content p {
+            color: #666;
+            font-size: 13px;
+        }
+
+        @media (max-width: 768px) {
+            .completion-card {
+                padding: 40px 25px;
+            }
+
+            .completion-header h1 {
+                font-size: 26px;
+            }
+
+            .action-buttons {
+                grid-template-columns: 1fr;
+            }
+
+            .success-icon {
+                width: 100px;
+                height: 100px;
+            }
+
+            .success-icon i {
+                font-size: 50px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div th:replace="~{web/layout/header :: header}"></div>
+    
+    <div class="main-container">
+        <div class="completion-card">
+            <div class="icon-container">
+                <div class="success-icon">
+                    <i class="fa-solid fa-clock"></i>
+                </div>
+            </div>
+
+            <div class="completion-header">
+                <h1>Đơn hàng đã được tạo!</h1>
+                <p>Cảm ơn bạn đã tin tưởng và mua sắm tại Pet Shop</p>
+                <div class="status-badge">
+                    <i class="fa-solid fa-hourglass-half"></i>
+                    <span>Đang chờ xác nhận thanh toán</span>
+                </div>
+            </div>
+
+            <div class="info-box">
+                <h3>
+                    <i class="fa-solid fa-info-circle"></i>
+                    Thông tin đơn hàng
+                </h3>
+                <ul>
+                    <li>
+                        <i class="fa-solid fa-receipt"></i>
+                        <span>Mã đơn hàng: <strong th:text="${orderIds}">DH001, DH002</strong></span>
+                    </li>
+                    <li>
+                        <i class="fa-solid fa-credit-card"></i>
+                        <span>Phương thức thanh toán: <strong>Chuyển khoản ngân hàng (VietQR)</strong></span>
+                    </li>
+                    <li>
+                        <i class="fa-solid fa-clock"></i>
+                        <span>Trạng thái: <strong style="color: #ffc107;">Đang chờ xác nhận thanh toán</strong></span>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="timeline">
+                <h3>Quy trình xử lý đơn hàng</h3>
+                <div class="timeline-item">
+                    <div class="timeline-icon active">
+                        <i class="fa-solid fa-check"></i>
+                    </div>
+                    <div class="timeline-content">
+                        <h4>Đã tạo đơn hàng</h4>
+                        <p>Đơn hàng của bạn đã được tạo thành công</p>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-icon active">
+                        <i class="fa-solid fa-hourglass-half"></i>
+                    </div>
+                    <div class="timeline-content">
+                        <h4>Đang chờ admin xác nhận thanh toán</h4>
+                        <p>Admin sẽ kiểm tra giao dịch chuyển khoản của bạn</p>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-icon pending">
+                        <i class="fa-solid fa-box"></i>
+                    </div>
+                    <div class="timeline-content">
+                        <h4>Chuẩn bị hàng</h4>
+                        <p>Sau khi xác nhận thanh toán, shop sẽ chuẩn bị hàng</p>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-icon pending">
+                        <i class="fa-solid fa-truck"></i>
+                    </div>
+                    <div class="timeline-content">
+                        <h4>Giao hàng</h4>
+                        <p>Đơn hàng sẽ được giao đến địa chỉ của bạn</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="note-box">
+                <h4>
+                    <i class="fa-solid fa-exclamation-triangle"></i>
+                    Lưu ý quan trọng
+                </h4>
+                <p>
+                    • Đơn hàng của bạn đang ở trạng thái <strong>"Đang chờ xác nhận thanh toán"</strong><br>
+                    • Admin sẽ kiểm tra giao dịch chuyển khoản trong tài khoản ngân hàng<br>
+                    • Sau khi xác nhận thanh toán thành công, đơn hàng sẽ được chuyển sang trạng thái "Chờ xác nhận" và bắt đầu xử lý<br>
+                    • Thời gian xác nhận: Thường trong vòng 1-2 giờ (giờ hành chính)<br>
+                    • Bạn có thể theo dõi trạng thái đơn hàng bất kỳ lúc nào
+                </p>
+            </div>
+
+            <div class="action-buttons">
+                <a th:href="@{/track-order}" class="btn btn-primary">
+                    <i class="fa-solid fa-map-location-dot"></i>
+                    Theo dõi đơn hàng
+                </a>
+                <a th:href="@{/products}" class="btn btn-success">
+                    <i class="fa-solid fa-shopping-bag"></i>
+                    Tiếp tục mua sắm
+                </a>
+                <a th:href="@{/}" class="btn btn-secondary">
+                    <i class="fa-solid fa-house"></i>
+                    Trang chủ
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div th:replace="~{web/layout/footer :: footer}"></div>
+
+    <script th:src="@{/js/web/header.js}"></script>
+</body>
+</html>

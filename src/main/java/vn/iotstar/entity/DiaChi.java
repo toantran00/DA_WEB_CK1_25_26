@@ -36,6 +36,12 @@ public class DiaChi {
     @Column(name = "DiaChiChiTiet", nullable = false, columnDefinition = "NVARCHAR(500)")
     private String diaChiChiTiet;
     
+    @Column(name = "Latitude")
+    private Double latitude;
+    
+    @Column(name = "Longitude")
+    private Double longitude;
+    
     @Column(name = "MacDinh")
     @Builder.Default
     private Boolean macDinh = false;

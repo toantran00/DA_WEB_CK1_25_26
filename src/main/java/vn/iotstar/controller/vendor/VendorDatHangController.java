@@ -157,6 +157,13 @@ public class VendorDatHangController {
                 return ResponseEntity.badRequest().body(response);
             }
             
+            // KIỂM TRA: Nếu đơn hàng đang ở trạng thái Banking thì không cho phép cập nhật
+            if ("Banking".equals(datHang.getTrangThai())) {
+                response.put("success", false);
+                response.put("message", "Vui lòng chờ Admin xác nhận thanh toán");
+                return ResponseEntity.badRequest().body(response);
+            }
+            
             // KIỂM TRA: Nếu đơn hàng đã hoàn thành hoặc đã hủy thì không cho phép cập nhật
             if ("Hoàn thành".equals(datHang.getTrangThai()) || "Hủy".equals(datHang.getTrangThai())) {
                 response.put("success", false);

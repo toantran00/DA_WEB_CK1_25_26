@@ -581,7 +581,7 @@ function showToast(type, title, message) {
     
     setTimeout(() => {
         closeToast(toastId);
-    }, 5000);
+    }, 2000);
 }
 
 function closeToast(toastId) {
@@ -654,7 +654,7 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(function() {
             const bsAlert = new bootstrap.Alert(alert);
             bsAlert.close();
-        }, 5000);
+        }, 2000);
     });
     
     console.log('Promotions management system fully initialized');

@@ -1,5 +1,50 @@
 // header.js - Complete functionality for header
 
+// ========== GLOBAL TOAST FUNCTION ==========
+window.showToast = function(type, title, message, duration = 3000) {
+    // Tạo hoặc lấy toast container
+    let toastContainer = document.getElementById('toastContainer');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toastContainer';
+        toastContainer.className = 'toast-container';
+        toastContainer.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999;';
+        document.body.appendChild(toastContainer);
+    }
+    
+    // Tạo toast element
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.style.cssText = `
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        margin-bottom: 10px;
+        min-width: 300px;
+        max-width: 400px;
+        border-left: 4px solid ${type === 'success' ? '#28a745' : '#dc3545'};
+        animation: slideInRight 0.3s ease-out;
+    `;
+    
+    toast.innerHTML = `
+        <div style="padding: 10px 15px; border-bottom: 1px solid #dee2e6; display: flex; justify-content: space-between; align-items: center;">
+            <strong style="color: #333; font-weight: 600;">${title}</strong>
+            <button type="button" onclick="this.parentElement.parentElement.remove()" style="background: none; border: none; font-size: 18px; cursor: pointer; color: #6c757d; line-height: 1;">×</button>
+        </div>
+        <div style="padding: 15px; color: #555;">${message}</div>
+    `;
+    
+    toastContainer.appendChild(toast);
+    
+    // Auto remove after duration
+    setTimeout(() => {
+        if (toast.parentElement) {
+            toast.style.animation = 'slideOutRight 0.3s ease-out';
+            setTimeout(() => toast.remove(), 1000);
+        }
+    }, duration);
+};
+
 document.addEventListener('DOMContentLoaded', function() {
     
     // Variables
@@ -287,14 +332,21 @@ document.addEventListener('DOMContentLoaded', function() {
                     showAdminMenu();
                 }
 
-                // Ẩn link Đăng ký cửa hàng nếu là VENDOR
+                // Hiển thị link Cửa hàng của tôi cho VENDOR, Đăng ký cửa hàng cho user khác
+                const myStoreLink = document.getElementById('myStoreLink');
                 if (user.role === 'VENDOR' || (user.vaiTro && user.vaiTro.maVaiTro === 'VENDOR')) {
                     if (registerStoreLink) {
                         registerStoreLink.style.display = 'none';
                     }
+                    if (myStoreLink) {
+                        myStoreLink.style.display = 'block';
+                    }
                 } else {
                     if (registerStoreLink) {
                         registerStoreLink.style.display = 'block';
+                    }
+                    if (myStoreLink) {
+                        myStoreLink.style.display = 'none';
                     }
                 }
             } catch (e) {
@@ -313,8 +365,13 @@ document.addEventListener('DOMContentLoaded', function() {
             if (userAccountLink) userAccountLink.style.display = 'none';
             hideAdminMenu();
             
+            // Ẩn nút "Đăng ký cửa hàng" khi chưa đăng nhập
             if (registerStoreLink) {
-                registerStoreLink.style.display = 'block';
+                registerStoreLink.style.display = 'none';
+            }
+            const myStoreLink = document.getElementById('myStoreLink');
+            if (myStoreLink) {
+                myStoreLink.style.display = 'none';
             }
             
             // Fallback: Nếu chưa đăng nhập, dùng localStorage
@@ -604,7 +661,14 @@ document.addEventListener('DOMContentLoaded', function() {
 	function showCartNotification(message, isError = false) {
 	    const type = isError ? 'error' : 'success';
 	    const title = isError ? 'Thất bại' : 'Thành công';
-	    showToast(type, title, message, 1000);
+	    
+	    // Sửa từ 1000 thành 3000 để hiển thị lâu hơn
+	    if (typeof showToast === 'function') {
+	        showToast(type, title, message, 3000);
+	    } else {
+	        // Fallback nếu hàm showToast không tồn tại
+	        console.log(`${title}: ${message}`);
+	    }
 	}
 
     // ========== ACTIVE MENU MANAGEMENT ==========

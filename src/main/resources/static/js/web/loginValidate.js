@@ -13,9 +13,9 @@ document.addEventListener('DOMContentLoaded', function() {
 				if (userRole === 'ADMIN') {
 				    window.location.href = '/admin/dashboard';
 				} else if (userRole === 'VENDOR') {
-				    window.location.href = '/vendor/dashboard';
+				    window.location.href = '/';
 				} else if (userRole === 'SHIPPER') {
-				    window.location.href = '/shipper/dashboard'; // Thêm dòng này
+				    window.location.href = '/shipper/dashboard';
 				} else {
 				    window.location.href = '/';
 				}
@@ -102,8 +102,8 @@ document.addEventListener('DOMContentLoaded', function() {
 						    console.log('Redirecting to admin dashboard');
 						    window.location.href = '/admin/dashboard';
 						} else if (userRole === 'VENDOR') {
-						    console.log('Redirecting to vendor dashboard');
-						    window.location.href = '/vendor/dashboard';
+						    console.log('Redirecting to home page for VENDOR');
+						    window.location.href = '/';
 						} else if (userRole === 'SHIPPER') {
 						    console.log('Redirecting to shipper dashboard');
 						    window.location.href = '/shipper/dashboard'; // Thêm dòng này

@@ -48,6 +48,78 @@ public class OrderController {
     @Autowired
     private DiaChiService diaChiService;
     
+    @Autowired
+    private PhuongThucVanChuyenService phuongThucVanChuyenService;
+    
+    @GetMapping("/vietqr-payment")
+    public String showVietQRPayment(@RequestParam String orderIds, 
+                                   @RequestParam BigDecimal amount,
+                                   Model model) {
+        try {
+            // Thông tin ngân hàng
+            String bankBin = "970405"; // Agribank
+            String accountNo = "6501205236130";
+            String accountName = "PHAM NGOC HUU";
+            
+            // Tạo nội dung chuyển khoản
+            String description = "Thanh toan don hang " + orderIds.replace(",", " ");
+            
+            // Tạo URL VietQR
+            String vietQRUrl = qrCodeService.generateVietQRCode(
+                bankBin, 
+                accountNo, 
+                accountName, 
+                amount.longValue(), 
+                description
+            );
+            
+            // Thêm danh mục vào model (cho header)
+            List<DanhMuc> danhMucs = danhMucService.findAllActiveCategories();
+            model.addAttribute("danhMucs", danhMucs);
+            
+            model.addAttribute("qrCodeUrl", vietQRUrl);
+            model.addAttribute("amount", amount);
+            model.addAttribute("orderIds", orderIds);
+            model.addAttribute("description", description);
+            model.addAttribute("bankName", "Agribank - Ngân hàng Nông nghiệp và Phát triển Nông thôn Việt Nam");
+            model.addAttribute("accountNo", accountNo);
+            model.addAttribute("accountName", accountName);
+            
+            return "web/vietqr-payment";
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            model.addAttribute("error", "Không thể tạo mã QR: " + e.getMessage());
+            
+            List<DanhMuc> danhMucs = danhMucService.findAllActiveCategories();
+            model.addAttribute("danhMucs", danhMucs);
+            
+            return "web/error";
+        }
+    }
+    
+    @GetMapping("/payment-completed")
+    public String paymentCompleted(@RequestParam String orderIds, Model model) {
+        try {
+            // Thêm danh mục vào model (cho header)
+            List<DanhMuc> danhMucs = danhMucService.findAllActiveCategories();
+            model.addAttribute("danhMucs", danhMucs);
+            
+            model.addAttribute("orderIds", orderIds);
+            
+            return "web/payment-completed";
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            model.addAttribute("error", "Có lỗi xảy ra: " + e.getMessage());
+            
+            List<DanhMuc> danhMucs = danhMucService.findAllActiveCategories();
+            model.addAttribute("danhMucs", danhMucs);
+            
+            return "web/error";
+        }
+    }
+    
     @GetMapping("/qr-payment")
     public String showQRPayment(@RequestParam Integer orderId, 
                               @RequestParam String method,
@@ -81,7 +153,7 @@ public class OrderController {
     }
 
     @GetMapping
-    public String viewOrderPage(Model model) {
+    public String viewOrderPage(@RequestParam(required = false) String selectedItems, Model model) {
         try {
             // Kiểm tra đăng nhập
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -107,6 +179,27 @@ public class OrderController {
             List<MatHang> matHangs = matHangService.findByGioHang(gioHang);
             if (matHangs.isEmpty()) {
                 return "redirect:/cart";
+            }
+            
+            // Lọc sản phẩm theo danh sách đã chọn (nếu có)
+            if (selectedItems != null && !selectedItems.isEmpty()) {
+                try {
+                    List<Integer> selectedIds = Arrays.stream(selectedItems.split(","))
+                            .map(String::trim)
+                            .map(Integer::parseInt)
+                            .collect(Collectors.toList());
+                    
+                    matHangs = matHangs.stream()
+                            .filter(mh -> selectedIds.contains(mh.getMaMatHang()))
+                            .collect(Collectors.toList());
+                    
+                    if (matHangs.isEmpty()) {
+                        model.addAttribute("error", "Không tìm thấy sản phẩm đã chọn");
+                        return "redirect:/cart";
+                    }
+                } catch (Exception e) {
+                    System.err.println("Lỗi khi parse selectedItems: " + e.getMessage());
+                }
             }
 
             // Xử lý hình ảnh sản phẩm
@@ -181,6 +274,10 @@ public class OrderController {
             model.addAttribute("nguoiDung", nguoiDung);
             model.addAttribute("datHangRequest", datHangRequest);
             model.addAttribute("diaChis", diaChis); // Thêm danh sách địa chỉ
+            
+            // Thêm danh sách phương thức vận chuyển
+            List<PhuongThucVanChuyen> phuongThucVanChuyens = phuongThucVanChuyenService.findActiveShippingMethods();
+            model.addAttribute("shippingMethods", phuongThucVanChuyens);
 
             return "web/order";
 
@@ -283,6 +380,36 @@ public class OrderController {
 
                 return "web/order-success";
 
+            } else if ("VIETQR".equals(datHangRequest.getPhuongThucThanhToan())) {
+                // Thanh toán VietQR - set trạng thái "Banking" và tạo thanh toán cho từng đơn hàng
+                for (DatHang datHang : datHangs) {
+                    // Set trạng thái đơn hàng là "Banking" (đang chờ xác nhận thanh toán)
+                    datHang.setTrangThai("Banking");
+                    datHangService.save(datHang);
+                    
+                    ThanhToan thanhToan = ThanhToan.builder()
+                            .datHang(datHang)
+                            .phuongThuc("VIETQR")
+                            .soTienThanhToan(datHang.getTongTien())
+                            .ngayThanhToan(new Date())
+                            .trangThai("Banking")
+                            .build();
+                    thanhToanService.save(thanhToan);
+                }
+                
+                // Xóa giỏ hàng
+                GioHang gioHang = gioHangService.findByNguoiDung(nguoiDung);
+                if (gioHang != null) {
+                    matHangService.clearCart(gioHang);
+                }
+                
+                // Chuyển đến trang hiển thị QR code
+                String orderIds = datHangs.stream()
+                        .map(dh -> dh.getMaDatHang().toString())
+                        .collect(Collectors.joining(","));
+                
+                return "redirect:/orders/vietqr-payment?orderIds=" + orderIds + "&amount=" + totalAmount;
+                
             } else if ("MOMO".equals(datHangRequest.getPhuongThucThanhToan()) || 
                       "VNPAY".equals(datHangRequest.getPhuongThucThanhToan())) {
                 // Thanh toán online - lưu danh sách order IDs

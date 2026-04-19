@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đơn hàng cần duyệt thanh toán - Pet Shop Admin</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" th:href="@{/css/admin/dashboard.css}">
+    <link rel="stylesheet" th:href="@{/css/admin/orders/orders.css}">
+    
+    <style>
+        .banking-badge {
+            background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 13px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            animation: pulse-glow 2s infinite;
+        }
+        
+        @keyframes pulse-glow {
+            0%, 100% {
+                box-shadow: 0 0 10px rgba(255, 193, 7, 0.5);
+            }
+            50% {
+                box-shadow: 0 0 20px rgba(255, 193, 7, 0.8);
+            }
+        }
+        
+        .confirm-btn {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .confirm-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+            color: white;
+        }
+        
+        .alert-banking {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffe69c 100%);
+            border-left: 5px solid #ffc107;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+        }
+        
+        .alert-banking h5 {
+            color: #856404;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        
+        .alert-banking p {
+            color: #856404;
+            margin-bottom: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <div th:replace="~{admin/fragments/navbar :: navbar}"></div>
+
+            <main class="main-content">
+                <div th:replace="~{admin/fragments/header :: header}"></div>
+
+                <!-- Alert Info -->
+                <div class="alert-banking">
+                    <h5><i class="fas fa-info-circle me-2"></i>Đơn hàng cần duyệt thanh toán</h5>
+                    <p>
+                        <i class="fas fa-arrow-right me-2"></i>
+                        Danh sách này chứa các đơn hàng thanh toán bằng <strong>VietQR</strong> đang chờ admin kiểm tra và xác nhận đã nhận được tiền chuyển khoản.
+                        <br>
+                        <i class="fas fa-arrow-right me-2"></i>
+                        Sau khi xác nhận, đơn hàng sẽ tự động chuyển sang trạng thái <strong>"Chờ xác nhận"</strong> và được chuyển qua <strong>Danh sách đơn hàng</strong>.
+                    </p>
+                </div>
+
+                <div class="stats-container">
+                    <!-- Statistics Card -->
+                    <div class="status-summary-cards">
+                        <div class="status-summary-card" style="background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);">
+                            <div class="card-icon">
+                                <i class="fas fa-hourglass-half"></i>
+                            </div>
+                            <div class="card-content">
+                                <div class="status-count" th:text="${orderStats.totalBanking}" style="color: white;">0</div>
+                                <div class="status-label" style="color: white;">Đơn hàng cần duyệt</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Search Box -->
+                    <div class="search-box">
+                        <form th:action="@{/admin/orders/pending-banking}" method="get" class="row g-3" id="searchForm">
+                            <div class="col-md-8">
+                                <input type="text" 
+                                       class="form-control search-input" 
+                                       name="keyword" 
+                                       th:value="${keyword}"
+                                       placeholder="Tìm kiếm theo tên khách hàng hoặc mã đơn hàng...">
+                            </div>
+                            <div class="col-md-2">
+                                <button type="submit" class="btn btn-search w-100">
+                                    <i class="fas fa-search me-2"></i>Tìm kiếm
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Filter Section -->
+                    <div class="filter-section">
+                        <h6 class="filter-title">
+                            <i class="fas fa-filter"></i>
+                            Bộ lọc
+                            <span class="filter-badge" th:text="${datHangPage.totalElements}">0</span>
+                        </h6>
+                        
+                        <form th:action="@{/admin/orders/pending-banking}" method="get" class="row g-3 align-items-end">
+                            <input type="hidden" name="keyword" th:value="${keyword}">
+                            
+                            <div class="col-md-2">
+                                <label class="form-label">Từ ngày</label>
+                                <input type="date" class="form-control" name="startDate" th:value="${startDate}">
+                            </div>
+                            
+                            <div class="col-md-2">
+                                <label class="form-label">Đến ngày</label>
+                                <input type="date" class="form-control" name="endDate" th:value="${endDate}">
+                            </div>
+                            
+                            <div class="col-md-3">
+                                <label class="form-label">Cửa hàng</label>
+                                <select class="form-select" name="maCuaHang">
+                                    <option value="">Tất cả cửa hàng</option>
+                                    <option th:each="store : ${cuaHangs}" 
+                                            th:value="${store.maCuaHang}"
+                                            th:text="${store.tenCuaHang}"
+                                            th:selected="${maCuaHang != null && maCuaHang == store.maCuaHang}">
+                                    </option>
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-3 d-flex gap-2">
+                                <button type="submit" class="btn btn-search flex-grow-1">
+                                    <i class="fas fa-check me-2"></i>Áp dụng
+                                </button>
+                                
+                                <a th:href="@{/admin/orders/pending-banking}" class="btn btn-clear-filters" title="Xóa bộ lọc">
+                                    <i class="fas fa-times"></i>
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <!-- Orders Table -->
+                    <div class="table-container">
+                        <div class="table-header-section">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h4 class="mb-0">
+                                    <i class="fas fa-list me-2"></i>
+                                    Danh sách đơn hàng cần duyệt
+                                    <span class="order-count-badge" th:text="${datHangPage.totalElements}">0</span>
+                                </h4>
+                                <a th:href="@{/admin/orders}" class="btn btn-secondary">
+                                    <i class="fas fa-list me-2"></i>Về Danh sách đơn hàng
+                                </a>
+                            </div>
+                        
+                            <div id="selectionControls" class="selection-controls" style="display: none;">
+                                <span class="selected-count">
+                                    Đã chọn: <strong id="selectedCount">0</strong> đơn hàng
+                                </span>
+                                <button type="button" class="btn btn-clear-selection btn-sm me-2" onclick="clearSelection()">
+                                    <i class="fas fa-times me-1"></i>Bỏ chọn
+                                </button>
+                                
+                                <button type="button" class="btn btn-success btn-sm me-2" onclick="bulkConfirmBanking()">
+                                    <i class="fas fa-check-circle me-1"></i>Xác nhận thanh toán
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table class="table admin-orders-table">
+                                <thead>
+                                    <tr>
+                                        <th width="50">
+                                            <div class="form-check d-flex justify-content-center">
+                                                <input class="form-check-input" type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this)">
+                                            </div>
+                                        </th>
+                                        <th width="80">Mã ĐH</th>
+                                        <th>Khách hàng</th>
+                                        <th width="150">Cửa hàng</th>
+                                        <th width="120">Ngày đặt</th>
+                                        <th width="120">Tổng tiền</th>
+                                        <th width="150">Địa chỉ giao</th>
+                                        <th width="120">SĐT</th>
+                                        <th width="150">Trạng thái</th>
+                                        <th width="150">Thao tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:each="order : ${datHangPage.content}">
+                                        <td>
+                                            <div class="form-check d-flex justify-content-center">
+                                                <input class="form-check-input order-checkbox" 
+                                                       type="checkbox" 
+                                                       th:value="${order.maDatHang}"
+                                                       onchange="updateSelectionControls()">
+                                            </div>
+                                        </td>
+                                        <td><strong th:text="${order.maDatHang}">1</strong></td>
+                                        <td>
+                                            <div class="customer-info">
+                                                <strong th:text="${order.nguoiDung.hoTen}">Tên KH</strong>
+                                                <small class="text-muted d-block" th:text="${order.nguoiDung.email}">email@example.com</small>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="store-badge" th:if="${order.cuaHang != null}" 
+                                                  th:text="${order.cuaHang.tenCuaHang}">Cửa hàng</span>
+                                            <span class="text-muted" th:if="${order.cuaHang == null}">N/A</span>
+                                        </td>
+                                        <td>
+                                            <span class="date-display" 
+                                                  th:text="${#temporals.format(order.ngayDat, 'dd/MM/yyyy')}">01/01/2024</span>
+                                        </td>
+                                        <td>
+                                            <span class="amount-display" 
+                                                  th:text="${#numbers.formatDecimal(order.tongTien, 0, 'COMMA', 0, 'POINT') + ' ₫'}">1,000,000 ₫</span>
+                                        </td>
+                                        <td>
+                                            <span th:text="${order.diaChiGiaoHang} ?: 'Chưa cập nhật'">Địa chỉ</span>
+                                        </td>
+                                        <td>
+                                            <span th:text="${order.soDienThoaiGiaoHang} ?: 'N/A'">0123456789</span>
+                                        </td>
+                                        <td>
+                                            <span class="banking-badge">
+                                                <i class="fas fa-hourglass-half"></i>
+                                                Chờ xác nhận TT
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div class="d-flex gap-2">
+                                                <button type="button" 
+                                                        class="btn confirm-btn btn-sm" 
+                                                        th:onclick="'confirmBankingPayment(' + ${order.maDatHang} + ')'"
+                                                        title="Xác nhận đã nhận tiền">
+                                                    <i class="fas fa-check-circle me-1"></i>Xác nhận
+                                                </button>
+                                                <a th:href="@{/admin/orders/view/{id}(id=${order.maDatHang})}" 
+                                                   class="btn btn-info btn-sm"
+                                                   title="Xem chi tiết">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr th:if="${datHangPage.content.empty}">
+                                        <td colspan="10" class="text-center py-5">
+                                            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                                            <p class="text-muted">Không có đơn hàng cần duyệt thanh toán</p>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Pagination -->
+                        <div th:if="${datHangPage.totalPages > 1}" class="pagination-container">
+                            <nav>
+                                <ul class="pagination justify-content-center">
+                                    <li class="page-item" th:classappend="${datHangPage.first} ? 'disabled'">
+                                        <a class="page-link" 
+                                           th:href="@{/admin/orders/pending-banking(page=${datHangPage.number - 1}, size=${datHangPage.size}, keyword=${keyword}, startDate=${startDate}, endDate=${endDate}, maCuaHang=${maCuaHang})}">
+                                            <i class="fas fa-chevron-left"></i>
+                                        </a>
+                                    </li>
+                                    
+                                    <li class="page-item" 
+                                        th:each="i : ${#numbers.sequence(0, datHangPage.totalPages - 1)}"
+                                        th:classappend="${i == datHangPage.number} ? 'active'">
+                                        <a class="page-link" 
+                                           th:href="@{/admin/orders/pending-banking(page=${i}, size=${datHangPage.size}, keyword=${keyword}, startDate=${startDate}, endDate=${endDate}, maCuaHang=${maCuaHang})}"
+                                           th:text="${i + 1}">1</a>
+                                    </li>
+                                    
+                                    <li class="page-item" th:classappend="${datHangPage.last} ? 'disabled'">
+                                        <a class="page-link" 
+                                           th:href="@{/admin/orders/pending-banking(page=${datHangPage.number + 1}, size=${datHangPage.size}, keyword=${keyword}, startDate=${startDate}, endDate=${endDate}, maCuaHang=${maCuaHang})}">
+                                            <i class="fas fa-chevron-right"></i>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </nav>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script th:src="@{/js/admin/header.js}"></script>
+    
+    <script>
+        // Toggle select all checkboxes
+        function toggleSelectAll(checkbox) {
+            const checkboxes = document.querySelectorAll('.order-checkbox');
+            checkboxes.forEach(cb => cb.checked = checkbox.checked);
+            updateSelectionControls();
+        }
+
+        // Update selection controls visibility
+        function updateSelectionControls() {
+            const checkedBoxes = document.querySelectorAll('.order-checkbox:checked');
+            const selectionControls = document.getElementById('selectionControls');
+            const selectedCount = document.getElementById('selectedCount');
+            
+            if (checkedBoxes.length > 0) {
+                selectionControls.style.display = 'flex';
+                selectedCount.textContent = checkedBoxes.length;
+            } else {
+                selectionControls.style.display = 'none';
+                document.getElementById('selectAllCheckbox').checked = false;
+            }
+        }
+
+        // Clear selection
+        function clearSelection() {
+            document.querySelectorAll('.order-checkbox').forEach(cb => cb.checked = false);
+            document.getElementById('selectAllCheckbox').checked = false;
+            updateSelectionControls();
+        }
+
+        // Confirm single banking payment
+        function confirmBankingPayment(orderId) {
+            Swal.fire({
+                title: 'Xác nhận thanh toán',
+                text: 'Bạn đã kiểm tra và nhận được tiền chuyển khoản cho đơn hàng này?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#28a745',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: '<i class="fas fa-check me-2"></i>Đã nhận tiền',
+                cancelButtonText: '<i class="fas fa-times me-2"></i>Hủy'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    fetch(`/admin/orders/confirm-banking/${orderId}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Thành công!',
+                                text: data.message,
+                                timer: 2000,
+                                showConfirmButton: false
+                            }).then(() => {
+                                window.location.reload();
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Lỗi!',
+                                text: data.message
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Lỗi!',
+                            text: 'Có lỗi xảy ra khi xác nhận thanh toán'
+                        });
+                    });
+                }
+            });
+        }
+
+        // Bulk confirm banking payments
+        function bulkConfirmBanking() {
+            const checkedBoxes = document.querySelectorAll('.order-checkbox:checked');
+            const orderIds = Array.from(checkedBoxes).map(cb => cb.value);
+
+            if (orderIds.length === 0) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Chưa chọn đơn hàng',
+                    text: 'Vui lòng chọn ít nhất một đơn hàng để xác nhận'
+                });
+                return;
+            }
+
+            Swal.fire({
+                title: 'Xác nhận thanh toán hàng loạt',
+                text: `Bạn muốn xác nhận thanh toán cho ${orderIds.length} đơn hàng đã chọn?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#28a745',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: '<i class="fas fa-check me-2"></i>Xác nhận',
+                cancelButtonText: '<i class="fas fa-times me-2"></i>Hủy'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const formData = new URLSearchParams();
+                    orderIds.forEach(id => formData.append('ids', id));
+
+                    fetch('/admin/orders/bulk-confirm-banking', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            let message = data.message;
+                            if (data.errors && data.errors.length > 0) {
+                                message += '\n\nChi tiết lỗi:\n' + data.errors.join('\n');
+                            }
+                            
+                            Swal.fire({
+                                icon: data.errorCount > 0 ? 'warning' : 'success',
+                                title: 'Hoàn thành!',
+                                text: message,
+                                timer: 3000,
+                                showConfirmButton: false
+                            }).then(() => {
+                                window.location.reload();
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Lỗi!',
+                                text: data.message
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Lỗi!',
+                            text: 'Có lỗi xảy ra khi xác nhận thanh toán'
+                        });
+                    });
+                }
+            });
+        }
+    </script>
+</body>
+</html>

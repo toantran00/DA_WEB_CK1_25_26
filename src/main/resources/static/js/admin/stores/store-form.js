@@ -28,7 +28,7 @@ function showToast(type, title, message) {
     // Auto close after 5 seconds
     setTimeout(() => {
         closeToast(toastId);
-    }, 5000);
+    }, 2000);
 }
 
 // Function to close toast
@@ -327,7 +327,7 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(function() {
             const bsAlert = new bootstrap.Alert(alert);
             bsAlert.close();
-        }, 5000);
+        }, 2000);
     });
 
     // Kiểm tra và hiển thị thông báo nếu không có vendor khả dụng

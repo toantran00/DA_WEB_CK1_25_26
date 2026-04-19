@@ -180,6 +180,70 @@ public class ImageController {
             return ResponseEntity.notFound().build();
         }
     }
-    
-    
+
+    @GetMapping("/uploads/products/{fileName:.+}")
+    @ResponseBody
+    public ResponseEntity<Resource> serveProductImage(
+            @PathVariable String fileName,
+            HttpServletRequest request) {
+
+        try {
+            String projectPath = System.getProperty("user.dir");
+            String imagePath = projectPath + File.separator + "uploads" + File.separator + "products" + File.separator + fileName;
+            
+            Path filePath = Paths.get(imagePath);
+            Resource resource = new UrlResource(filePath.toUri());
+
+            if (!resource.exists() || !resource.isReadable()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            String contentType = "image/jpeg";
+            String lowerFileName = fileName.toLowerCase();
+            if (lowerFileName.endsWith(".png")) contentType = "image/png";
+            else if (lowerFileName.endsWith(".gif")) contentType = "image/gif";
+            else if (lowerFileName.endsWith(".webp")) contentType = "image/webp";
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType(contentType))
+                    .header(HttpHeaders.CACHE_CONTROL, "max-age=3600")
+                    .body(resource);
+
+        } catch (Exception ex) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @GetMapping("/uploads/categories/{fileName:.+}")
+    @ResponseBody
+    public ResponseEntity<Resource> serveCategoryImage(
+            @PathVariable String fileName,
+            HttpServletRequest request) {
+
+        try {
+            String projectPath = System.getProperty("user.dir");
+            String imagePath = projectPath + File.separator + "uploads" + File.separator + "categories" + File.separator + fileName;
+            
+            Path filePath = Paths.get(imagePath);
+            Resource resource = new UrlResource(filePath.toUri());
+
+            if (!resource.exists() || !resource.isReadable()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            String contentType = "image/jpeg";
+            String lowerFileName = fileName.toLowerCase();
+            if (lowerFileName.endsWith(".png")) contentType = "image/png";
+            else if (lowerFileName.endsWith(".gif")) contentType = "image/gif";
+            else if (lowerFileName.endsWith(".webp")) contentType = "image/webp";
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType(contentType))
+                    .header(HttpHeaders.CACHE_CONTROL, "max-age=3600")
+                    .body(resource);
+
+        } catch (Exception ex) {
+            return ResponseEntity.notFound().build();
+        }
+    }
 }

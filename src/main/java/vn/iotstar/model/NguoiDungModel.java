@@ -31,6 +31,8 @@ public class NguoiDungModel {
     private String sdt;
     
     private String diaChi;
+    private Double latitude;
+    private Double longitude;
     
     private String hinhAnh;
     

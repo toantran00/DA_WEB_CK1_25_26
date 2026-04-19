@@ -23,6 +23,10 @@ public class DiaChiDTO {
     @Size(max = 500, message = "Địa chỉ không được quá 500 ký tự")
     private String diaChiChiTiet;
     
+    private Double latitude;
+    
+    private Double longitude;
+    
     private Boolean macDinh;
     
     private String trangThai;
