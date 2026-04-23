@@ -3,6 +3,7 @@ package vn.iotstar.config;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -63,7 +64,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(Arrays.asList("*"));
+        configuration.setAllowedOrigins(Arrays.asList("http://localhost:8080", "http://127.0.0.1:8080"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers"));
         configuration.setExposedHeaders(Arrays.asList("Access-Control-Allow-Origin", "Access-Control-Allow-Credentials"));
@@ -137,10 +138,18 @@ public class SecurityConfig {
                 .requestMatchers("/api/orders/*/invoice").permitAll()
                 .requestMatchers("/api/public/**").permitAll()
                 
+                // Swagger UI & OpenAPI docs — public access
+                .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/api-docs/**", "/v3/api-docs/**").permitAll()
+                
+                // Actuator health — public, others need auth
+                .requestMatchers("/actuator/health", "/actuator/info").permitAll()
+                .requestMatchers("/actuator/**").hasRole("ADMIN")
+                
                 // Static resources - cho phép truy cập tự do
                 .requestMatchers("/css/**", "/js/**", "/images/**", "/fonts/**", "/webjars/**").permitAll()
-                .requestMatchers("/uploads/**").permitAll()
-                .requestMatchers("/files/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/uploads/**", "/files/uploads/**", "/files/download/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/files/api/upload/**").authenticated()
+                .requestMatchers("/files/**").authenticated()
                 
                 // Public pages - không cần đăng nhập
                 .requestMatchers("/", "/index", "/home").permitAll()
@@ -150,8 +159,8 @@ public class SecurityConfig {
                 .requestMatchers("/products", "/product/**").permitAll()
                 .requestMatchers("/category/**", "/view/**").permitAll()
                 .requestMatchers("/stores", "/store/**").permitAll()
-                .requestMatchers("/profile").permitAll()
-                .requestMatchers("/profile/api/user/**").permitAll()
+                .requestMatchers("/profile").authenticated()
+                .requestMatchers("/profile/api/user/**").authenticated()
                 .requestMatchers("/access-denied").permitAll()
                 
                 // Chat endpoints - cho phép truy cập khi đã đăng nhập (session-based)
@@ -164,7 +173,7 @@ public class SecurityConfig {
                 
                 // User profile pages - cần đăng nhập
                 .requestMatchers("/user/**").authenticated()
-                .requestMatchers("/api/upload/**").permitAll()
+                .requestMatchers("/api/upload/**").authenticated()
                 .requestMatchers("/register-store").authenticated()
                 
                 // API user - cần đăng nhập
