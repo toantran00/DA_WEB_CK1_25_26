@@ -108,4 +108,27 @@ public interface DatHangChiTietRepository extends JpaRepository<DatHangChiTiet, 
     	        @Param("productName") String productName,
     	        @Param("trangThaiHuy") String trangThaiHuy,
     	        Pageable pageable);
+    // =================== CHART API QUERIES ===================
+
+    @Query("SELECT MONTH(dh.ngayDat), COALESCE(SUM(dhct.thanhTien), 0) FROM DatHangChiTiet dhct JOIN dhct.datHang dh WHERE YEAR(dh.ngayDat) = :year AND dh.trangThai = :trangThai GROUP BY MONTH(dh.ngayDat) ORDER BY MONTH(dh.ngayDat)")
+    List<Object[]> getRevenueByMonthAndYear(@Param("year") int year, @Param("trangThai") String trangThai);
+
+    @Query("SELECT MONTH(dh.ngayDat), COALESCE(SUM(dhct.thanhTien), 0) FROM DatHangChiTiet dhct JOIN dhct.datHang dh WHERE dhct.sanPham.cuaHang = :cuaHang AND YEAR(dh.ngayDat) = :year AND dh.trangThai = :trangThai GROUP BY MONTH(dh.ngayDat) ORDER BY MONTH(dh.ngayDat)")
+    List<Object[]> getRevenueByMonthAndYearAndCuaHang(@Param("year") int year, @Param("trangThai") String trangThai, @Param("cuaHang") CuaHang cuaHang);
+
+    @Query("SELECT sp.tenSanPham, SUM(dhct.soLuong) FROM DatHangChiTiet dhct JOIN dhct.sanPham sp JOIN dhct.datHang dh WHERE dh.trangThai = 'Hoan thanh' GROUP BY sp.tenSanPham ORDER BY SUM(dhct.soLuong) DESC")
+    List<Object[]> getTopSellingProducts(Pageable pageable);
+
+    default List<Object[]> getTopSellingProducts(int limit) { return getTopSellingProducts(org.springframework.data.domain.PageRequest.of(0, limit)); }
+
+    @Query("SELECT sp.tenSanPham, SUM(dhct.soLuong), SUM(dhct.thanhTien) FROM DatHangChiTiet dhct JOIN dhct.sanPham sp JOIN dhct.datHang dh WHERE sp.cuaHang = :cuaHang AND dh.trangThai = 'Hoan thanh' GROUP BY sp.tenSanPham ORDER BY SUM(dhct.soLuong) DESC")
+    List<Object[]> getTopSellingProductsByCuaHang(@Param("cuaHang") CuaHang cuaHang, Pageable pageable);
+
+    default List<Object[]> getTopSellingProductsByCuaHang(CuaHang cuaHang, int limit) { return getTopSellingProductsByCuaHang(cuaHang, org.springframework.data.domain.PageRequest.of(0, limit)); }
+
+    @Query("SELECT dh.ngayDat, COALESCE(SUM(dhct.thanhTien), 0) FROM DatHangChiTiet dhct JOIN dhct.datHang dh WHERE dh.trangThai = :trangThai AND dh.ngayDat BETWEEN :startDate AND :endDate GROUP BY dh.ngayDat ORDER BY dh.ngayDat")
+    List<Object[]> getRevenueByDateRange(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate, @Param("trangThai") String trangThai);
+
+    @Query("SELECT dh.ngayDat, COALESCE(SUM(dhct.thanhTien), 0) FROM DatHangChiTiet dhct JOIN dhct.datHang dh WHERE dhct.sanPham.cuaHang = :cuaHang AND dh.trangThai = :trangThai AND dh.ngayDat BETWEEN :startDate AND :endDate GROUP BY dh.ngayDat ORDER BY dh.ngayDat")
+    List<Object[]> getRevenueByDateRangeAndCuaHang(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate, @Param("trangThai") String trangThai, @Param("cuaHang") CuaHang cuaHang);
 }

@@ -137,6 +137,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/orders/*/invoice").permitAll()
                 .requestMatchers("/api/public/**").permitAll()
+                .requestMatchers("/api/wishlist/check/**").permitAll() // check trạng thái ở trang sản phẩm
                 
                 // Swagger UI & OpenAPI docs — public access
                 .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/api-docs/**", "/v3/api-docs/**").permitAll()

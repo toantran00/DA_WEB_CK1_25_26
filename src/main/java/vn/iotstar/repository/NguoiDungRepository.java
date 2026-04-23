@@ -18,43 +18,46 @@ public interface NguoiDungRepository extends JpaRepository<NguoiDung, Integer>, 
     Boolean existsByEmail(String email);
     List<NguoiDung> findTop5ByOrderByMaNguoiDungDesc();
     
-    // Đếm tổng số người dùng
+    // Äáº¿m tá»•ng sá»‘ ngÆ°á»i dÃ¹ng
     long count();
     
-    // Tìm người dùng theo vai trò
+    // TÃ¬m ngÆ°á»i dÃ¹ng theo vai trÃ²
     List<NguoiDung> findByVaiTro_MaVaiTro(String maVaiTro);
     
-    // Tìm người dùng theo mã vai trò và trạng thái
+    // TÃ¬m ngÆ°á»i dÃ¹ng theo mÃ£ vai trÃ² vÃ  tráº¡ng thÃ¡i
     List<NguoiDung> findByVaiTro_MaVaiTroAndTrangThai(String maVaiTro, String trangThai);
     
-    // Tìm kiếm người dùng theo tên hoặc email
+    // TÃ¬m kiáº¿m ngÆ°á»i dÃ¹ng theo tÃªn hoáº·c email
     @Query("SELECT n FROM NguoiDung n WHERE LOWER(n.tenNguoiDung) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(n.email) LIKE LOWER(CONCAT('%', :keyword, '%'))")
     List<NguoiDung> searchByTenNguoiDungOrEmail(String keyword);
     
     @Query("SELECT n FROM NguoiDung n WHERE LOWER(n.tenNguoiDung) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(n.email) LIKE LOWER(CONCAT('%', :keyword, '%'))")
     Page<NguoiDung> searchByTenNguoiDungOrEmail(@Param("keyword") String keyword, Pageable pageable);
     
-    // 1. Đếm người dùng theo vai trò (chỉ cần VENDOR và SHIPPER)
+    // 1. Äáº¿m ngÆ°á»i dÃ¹ng theo vai trÃ² (chá»‰ cáº§n VENDOR vÃ  SHIPPER)
     @Query("SELECT COUNT(n) FROM NguoiDung n WHERE n.vaiTro.maVaiTro = :maVaiTro")
     long countByVaiTroMaVaiTro(@Param("maVaiTro") String maVaiTro);
     
- // Đếm tổng người dùng thông thường (USER)
+ // Äáº¿m tá»•ng ngÆ°á»i dÃ¹ng thÃ´ng thÆ°á»ng (USER)
     @Query("SELECT COUNT(n) FROM NguoiDung n WHERE n.vaiTro.maVaiTro = 'USER'")
     long countUsers();
 
-    // Đếm tổng người dùng đang hoạt động (bao gồm cả ADMIN)
-    @Query("SELECT COUNT(n) FROM NguoiDung n WHERE n.trangThai = 'Hoạt động'")
+    // Äáº¿m tá»•ng ngÆ°á»i dÃ¹ng Ä‘ang hoáº¡t Ä‘á»™ng (bao gá»“m cáº£ ADMIN)
+    @Query("SELECT COUNT(n) FROM NguoiDung n WHERE n.trangThai = 'Hoáº¡t Ä‘á»™ng'")
     long countAllActiveUsers();
 
-    // Đếm tổng người dùng bị khóa (bao gồm cả ADMIN)
-    @Query("SELECT COUNT(n) FROM NguoiDung n WHERE n.trangThai = 'Khóa'")
+    // Äáº¿m tá»•ng ngÆ°á»i dÃ¹ng bá»‹ khÃ³a (bao gá»“m cáº£ ADMIN)
+    @Query("SELECT COUNT(n) FROM NguoiDung n WHERE n.trangThai = 'KhÃ³a'")
     long countAllInactiveUsers();
     
     NguoiDung findByMaNguoiDung(Integer maNguoiDung);
     
- // Tìm người dùng theo trạng thái
+ // TÃ¬m ngÆ°á»i dÃ¹ng theo tráº¡ng thÃ¡i
     List<NguoiDung> findByTrangThai(String trangThai);
     
-    // Đếm số người dùng theo trạng thái
+    // Äáº¿m sá»‘ ngÆ°á»i dÃ¹ng theo tráº¡ng thÃ¡i
     long countByTrangThai(String trangThai);
+    /** User moi dang ky theo thang trong nam (Admin Chart) */
+    @Query("SELECT MONTH(n.maNguoiDung), COUNT(n) FROM NguoiDung n WHERE n.vaiTro.maVaiTro = 'USER' GROUP BY MONTH(n.maNguoiDung)")
+    List<Object[]> countNewUsersByMonth(@Param("year") int year);
 }

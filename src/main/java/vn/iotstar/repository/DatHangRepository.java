@@ -106,4 +106,11 @@ public interface DatHangRepository extends JpaRepository<DatHang, Integer> {
         @Param("trangThai") String trangThai,
         @Param("maCuaHang") Integer maCuaHang,
         Pageable pageable);
+    // =================== CHART QUERIES ===================
+    
+    @Query("SELECT dh.trangThai, COUNT(dh) FROM DatHang dh GROUP BY dh.trangThai ORDER BY COUNT(dh) DESC")
+    List<Object[]> countGroupByTrangThai();
+
+    @Query("SELECT dh.trangThai, COUNT(DISTINCT dh) FROM DatHang dh JOIN dh.datHangChiTiets dhct WHERE dhct.sanPham.cuaHang = :cuaHang GROUP BY dh.trangThai ORDER BY COUNT(DISTINCT dh) DESC")
+    List<Object[]> countGroupByTrangThaiAndCuaHang(@Param("cuaHang") vn.iotstar.entity.CuaHang cuaHang);
 }
